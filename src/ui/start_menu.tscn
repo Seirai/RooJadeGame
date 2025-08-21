@@ -1,0 +1,44 @@
+[gd_scene load_steps=3 format=3 uid="uid://ds3egf3y1oaww"]
+
+[ext_resource type="Script" uid="uid://fqq0e8h18an6" path="res://src/scripts/ui/start_menu.gd" id="1_4ct4p"]
+[ext_resource type="Script" uid="uid://dp5d6mdi1bys4" path="res://src/scripts/service/settings_service.gd" id="2_4ct4p"]
+
+[node name="StartMenu" type="Control"]
+layout_mode = 3
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_4ct4p")
+
+[node name="MenuContainer" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -57.5
+offset_top = -68.0
+offset_right = 57.5
+offset_bottom = 68.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("2_4ct4p")
+
+[node name="StartButton" type="Button" parent="MenuContainer"]
+layout_mode = 2
+text = "Start"
+
+[node name="SettingsButton" type="Button" parent="MenuContainer"]
+layout_mode = 2
+text = "Settings"
+
+[node name="ExitButton" type="Button" parent="MenuContainer"]
+layout_mode = 2
+text = "Exit"
+
+[connection signal="pressed" from="MenuContainer/StartButton" to="." method="_on_start_button_pressed"]
