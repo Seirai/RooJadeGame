@@ -1,0 +1,6 @@
+[gd_scene load_steps=2 format=3 uid="uid://2ic06xrm0ehx"]
+
+[ext_resource type="Script" uid="uid://l0rwy2rcs3p1" path="res://src/scenes/systems/settlement.gd" id="1_cbjq1"]
+
+[node name="Settlement" type="Node"]
+script = ExtResource("1_cbjq1")

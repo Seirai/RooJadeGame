@@ -5,34 +5,39 @@ extends Node
 ## Also loads in game configuration and consts.
 ##
 
-const action_service = preload("res://src/scripts/service/action_service.gd")
 const settings_service = preload("res://src/scripts/service/settings_service.gd")
-const input_service = preload("res://src/scripts/service/input_service.gd")
+const scene_service = preload("res://src/scripts/service/scene_service.gd")
+const mob_service = preload("res://src/scripts/service/mob_service.gd")
+const camera_service = preload("res://src/scripts/service/camera_service.gd")
+const item_service = preload("res://src/scripts/service/item_service.gd")
 
-var ActionService: action_service
 var SettingsService: settings_service
-var InputService: input_service
-
-## Dictionary holding our current bound action map
-## Format: { "action_name": [InputEvent, InputEvent], ...}
-## @TODO In the future, we'd want to have a check to load from settings
-var actions := {}
+var SceneService: scene_service
+var MobService: mob_service
+var CameraService: camera_service
+var ItemService: item_service
 
 
 
 func _ready() -> void:
-
 	# Initialize game services in desired order
 	SettingsService = settings_service.new()
 	add_child(SettingsService)
 	# Load local settings data
 	SettingsService.load()
 
-	ActionService = action_service.new()
-	add_child(ActionService)
-	# Load actions
-	ActionService.load_actions()
+	# Initialize scene service
+	SceneService = scene_service.new()
+	add_child(SceneService)
 
-	InputService = input_service.new() # @TODO, fix coupling, requiring InputService to load after ActionService
-	add_child(InputService)
-	pass
+	# Initialize mob service
+	MobService = mob_service.new()
+	add_child(MobService)
+
+	# Initialize camera service
+	CameraService = camera_service.new()
+	add_child(CameraService)
+
+	# Initialize item service
+	ItemService = item_service.new()
+	add_child(ItemService)

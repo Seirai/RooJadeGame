@@ -1,0 +1,18 @@
+[gd_scene load_steps=6 format=3 uid="uid://c4j2uiiapurga"]
+
+[ext_resource type="Script" uid="uid://bfekc6wnh4fn2" path="res://src/scenes/components/mob.gd" id="1_fnf23"]
+[ext_resource type="PackedScene" uid="uid://dwtom501ggfjr" path="res://src/scenes/components/health.tscn" id="2_r8jj5"]
+[ext_resource type="PackedScene" uid="uid://csxh7fy5rkv8e" path="res://src/scenes/components/stat_container.tscn" id="3_stats"]
+[ext_resource type="PackedScene" uid="uid://bn7w2h3vq5kqm" path="res://src/scenes/components/mana_component.tscn" id="4_mana"]
+[ext_resource type="PackedScene" uid="uid://c5wkht3gf7mn7" path="res://src/scenes/components/controller.tscn" id="5_controller"]
+
+[node name="Mob" type="CharacterBody2D" groups=["Persist"]]
+script = ExtResource("1_fnf23")
+
+[node name="Health" parent="." instance=ExtResource("2_r8jj5")]
+
+[node name="Stats" parent="." instance=ExtResource("3_stats")]
+
+[node name="Mana" parent="." instance=ExtResource("4_mana")]
+
+[node name="Controller" parent="." instance=ExtResource("5_controller")]

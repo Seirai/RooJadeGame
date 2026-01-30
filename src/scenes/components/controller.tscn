@@ -1,0 +1,18 @@
+[gd_scene load_steps=8 format=3 uid="uid://c5wkht3gf7mn7"]
+
+[ext_resource type="Script" uid="uid://csoyj63sf22ws" path="res://src/scenes/components/controller.gd" id="1_controller"]
+[ext_resource type="Resource" uid="uid://dwgoc8tn2j83i" path="res://src/scripts/resource/input/input_mapping_context.tres" id="2_qnt55"]
+[ext_resource type="Resource" uid="uid://cjr6dhg0kobci" path="res://src/scripts/resource/input/move.tres" id="3_eqm3m"]
+[ext_resource type="Resource" path="res://src/scripts/resource/input/jump.tres" id="4_ditbx"]
+[ext_resource type="Resource" path="res://src/scripts/resource/input/attack.tres" id="5_6ws2l"]
+[ext_resource type="Resource" path="res://src/scripts/resource/input/interact.tres" id="6_ffr1c"]
+[ext_resource type="Resource" path="res://src/scripts/resource/input/dash.tres" id="7_dxfdm"]
+
+[node name="Controller" type="Node"]
+script = ExtResource("1_controller")
+gameplay_context = ExtResource("2_qnt55")
+move_action = ExtResource("3_eqm3m")
+jump_action = ExtResource("4_ditbx")
+attack_action = ExtResource("5_6ws2l")
+interact_action = ExtResource("6_ffr1c")
+dash_action = ExtResource("7_dxfdm")

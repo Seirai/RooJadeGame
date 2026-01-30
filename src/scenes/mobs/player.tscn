@@ -1,0 +1,20 @@
+[gd_scene load_steps=5 format=3 uid="uid://c61kjoplvb1qb"]
+
+[ext_resource type="PackedScene" uid="uid://c4j2uiiapurga" path="res://src/scenes/components/mob.tscn" id="1_m3skv"]
+[ext_resource type="Script" uid="uid://cbwtyuhtprq1a" path="res://src/scenes/mobs/player.gd" id="2_player"]
+[ext_resource type="SpriteFrames" uid="uid://c5idwfsx1vaaa" path="res://src/assets/spritesheets/player.tres" id="3_8akrl"]
+
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_7d0jm"]
+radius = 8.0
+height = 24.0
+
+[node name="Player" instance=ExtResource("1_m3skv")]
+script = ExtResource("2_player")
+can_dash = true
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." index="0"]
+sprite_frames = ExtResource("3_8akrl")
+animation = &"idle"
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="1"]
+shape = SubResource("CapsuleShape2D_7d0jm")

@@ -1,0 +1,34 @@
+[gd_scene load_steps=3 format=3 uid="uid://tejr4gt6j8cp"]
+
+[ext_resource type="Texture2D" uid="uid://bw2w1uqay77nc" path="res://src/assets/textures/mountains.png" id="1_qec73"]
+[ext_resource type="Texture2D" uid="uid://b755y041y80ed" path="res://src/assets/textures/blue.png" id="2_cr060"]
+
+[node name="MountainsBlue" type="Node2D"]
+z_index = -1
+
+[node name="Mountains" type="Parallax2D" parent="."]
+z_index = -1
+scroll_scale = Vector2(0.6, 1)
+scroll_offset = Vector2(0.1, 0)
+repeat_size = Vector2(336, 0)
+repeat_times = 6
+
+[node name="Sprite2D" type="Sprite2D" parent="Mountains"]
+z_index = 1
+texture = ExtResource("1_qec73")
+centered = false
+offset = Vector2(0, 60)
+
+[node name="Background" type="Parallax2D" parent="."]
+z_index = -2
+scroll_scale = Vector2(0.1, 1)
+scroll_offset = Vector2(0.7, 0)
+repeat_size = Vector2(336, 0)
+repeat_times = 9
+
+[node name="Sprite2D" type="Sprite2D" parent="Background"]
+texture = ExtResource("2_cr060")
+centered = false
+
+[node name="Camera2D" type="Camera2D" parent="."]
+anchor_mode = 0
