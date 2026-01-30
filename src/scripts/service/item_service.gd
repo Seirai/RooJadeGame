@@ -26,11 +26,11 @@ var _item_scenes: Dictionary = {}
 
 ## Base drop weights by rarity
 var rarity_weights: Dictionary = {
-	Item.Rarity.COMMON: 60.0,
-	Item.Rarity.UNCOMMON: 25.0,
-	Item.Rarity.RARE: 10.0,
-	Item.Rarity.EPIC: 4.0,
-	Item.Rarity.LEGENDARY: 1.0
+	Enums.Rarity.COMMON: 60.0,
+	Enums.Rarity.UNCOMMON: 25.0,
+	Enums.Rarity.RARE: 10.0,
+	Enums.Rarity.EPIC: 4.0,
+	Enums.Rarity.LEGENDARY: 1.0
 }
 
 ## Global drop rate modifier (1.0 = normal, 2.0 = double drops)
@@ -169,7 +169,7 @@ func get_all_item_ids() -> Array[int]:
 ## Get all items of a specific type
 ## @param item_type: ItemType to filter by
 ## @return: Array of matching Item resources
-func get_items_by_type(item_type: Item.ItemType) -> Array[Item]:
+func get_items_by_type(item_type: Enums.ItemType) -> Array[Item]:
 	var result: Array[Item] = []
 	for item in _items.values():
 		if item.item_type == item_type:
@@ -180,7 +180,7 @@ func get_items_by_type(item_type: Item.ItemType) -> Array[Item]:
 ## Get all items of a specific rarity
 ## @param rarity: Rarity to filter by
 ## @return: Array of matching Item resources
-func get_items_by_rarity(rarity: Item.Rarity) -> Array[Item]:
+func get_items_by_rarity(rarity: Enums.Rarity) -> Array[Item]:
 	var result: Array[Item] = []
 	for item in _items.values():
 		if item.rarity == rarity:
@@ -265,7 +265,7 @@ func spawn_items(item_id: int, position: Vector2, count: int, spread: float = 16
 ## Roll for a random rarity based on weights
 ## @param luck_bonus: Additional luck modifier (additive with global)
 ## @return: Rolled rarity
-func roll_rarity(luck_bonus: float = 0.0) -> Item.Rarity:
+func roll_rarity(luck_bonus: float = 0.0) -> Enums.Rarity:
 	var total_luck = global_luck_modifier + luck_bonus
 
 	# Adjust weights based on luck (luck increases rare drops)
@@ -276,7 +276,7 @@ func roll_rarity(luck_bonus: float = 0.0) -> Item.Rarity:
 		var weight = rarity_weights[rarity]
 
 		# Luck boosts higher rarities, reduces common
-		if rarity == Item.Rarity.COMMON:
+		if rarity == Enums.Rarity.COMMON:
 			weight = max(1.0, weight / total_luck)
 		else:
 			weight *= total_luck
@@ -293,7 +293,7 @@ func roll_rarity(luck_bonus: float = 0.0) -> Item.Rarity:
 		if roll <= cumulative:
 			return rarity
 
-	return Item.Rarity.COMMON
+	return Enums.Rarity.COMMON
 
 
 ## Process a drop table and return items to spawn

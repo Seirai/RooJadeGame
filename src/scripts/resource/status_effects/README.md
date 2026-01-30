@@ -66,7 +66,7 @@ static func _create_my_effect() -> StatusEffect:
 	effect.display_name = "My Effect"
 	effect.description = "Does something cool"
 	effect.base_power = 10.0
-	effect.damage_type = HealthComponent.DamageType.MAGIC
+	effect.damage_type = Enums.DamageType.MAGIC
 	effect.can_stack = true
 	effect.max_stacks = 3
 	effect.is_beneficial = false

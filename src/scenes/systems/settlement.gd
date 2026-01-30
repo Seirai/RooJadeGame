@@ -15,40 +15,11 @@
 extends Node
 class_name Settlement
 
-#region Enums
+const ProfessionManager = preload("res://src/scenes/systems/profession_manager.gd")
 
-## Professions available to Roos
-enum Profession {
-	NONE,       ## Unassigned
-	SCOUT,      ## Explores frontier, claims territory, detects threats
-	LUMBERJACK, ## Harvests wood from lumber mills
-	MINER,      ## Extracts stone and jade from quarries
-	BUILDER,    ## Constructs settlement infrastructure
-	FIGHTER,    ## Combat unit for hostile encounters
-}
-
-## Building types in the settlement
-enum BuildingType {
-	NONE,
-	LIVING_QUARTERS,  ## Housing for Roos
-	LUMBER_MILL,      ## Wood production
-	STONE_QUARRY,     ## Stone production
-	JADE_QUARRY,      ## Jade production (premium)
-	DEPOT,            ## Resource storage
-	RESEARCH_FACILITY,## Unlocks Scientist profession and tech
-	WORKSHOP,         ## Equipment crafting
-}
-
-## Settlement progression stages
-enum ProgressionStage {
-	FOUNDING,     ## Initial stage, minimal buildings
-	ESTABLISHED,  ## Basic infrastructure complete
-	GROWING,      ## Expanding territory
-	THRIVING,     ## Advanced buildings and research
-	ADVANCED,     ## Near jade asteroid
-}
-
-#endregion
+## Uses centralized enums from Enums autoload:
+## - Enums.BuildingType (NONE, LIVING_QUARTERS, LUMBER_MILL, STONE_QUARRY, etc.)
+## - Enums.ProgressionStage (FOUNDING, ESTABLISHED, GROWING, THRIVING, ADVANCED)
 
 #region Signals
 
@@ -60,13 +31,13 @@ signal resource_withdrawn(resource_id: int, amount: int)
 ## Roo signals
 signal roo_joined(roo: Node, is_viewer: bool)
 signal roo_left(roo: Node)
-signal roo_profession_changed(roo: Node, old_profession: Profession, new_profession: Profession)
+signal roo_profession_changed(roo: Node, old_profession: Enums.Professions, new_profession: Enums.Professions)
 signal ai_profession_distribution_changed()
 
 ## Building signals
-signal building_placed(building: Node, building_type: BuildingType)
-signal building_completed(building: Node, building_type: BuildingType)
-signal building_destroyed(building: Node, building_type: BuildingType)
+signal building_placed(building: Node, building_type: Enums.BuildingType)
+signal building_completed(building: Node, building_type: Enums.BuildingType)
+signal building_destroyed(building: Node, building_type: Enums.BuildingType)
 signal building_upgraded(building: Node, old_level: int, new_level: int)
 
 ## Territory signals
@@ -75,14 +46,14 @@ signal territory_lost(tile_position: Vector2i)
 signal threat_detected(position: Vector2, threat_type: String)
 
 ## Progression signals
-signal progression_stage_changed(old_stage: ProgressionStage, new_stage: ProgressionStage)
+signal progression_stage_changed(old_stage: Enums.ProgressionStage, new_stage: Enums.ProgressionStage)
 
 #endregion
 
 #region Properties
 
 ## Current progression stage
-var progression_stage: ProgressionStage = ProgressionStage.FOUNDING
+var progression_stage: Enums.ProgressionStage = Enums.ProgressionStage.FOUNDING
 
 ## Resource inventory [ItemsLibrary.Items -> amount]
 var _resources: Dictionary = {}
@@ -96,14 +67,14 @@ var _viewer_roos: Dictionary = {}
 ## AI Roos [ai_id -> Roo node]
 var _ai_roos: Dictionary = {}
 
-## AI profession distribution targets [Profession -> target_percentage (0.0-1.0)]
+## AI profession distribution targets [Enums.Professions -> target_percentage (0.0-1.0)]
 ## This is what the streamer/player configures
 var _ai_profession_targets: Dictionary = {
-	Profession.SCOUT: 0.1,
-	Profession.LUMBERJACK: 0.3,
-	Profession.MINER: 0.3,
-	Profession.BUILDER: 0.2,
-	Profession.FIGHTER: 0.1,
+	Enums.Professions.SCOUT: 0.1,
+	Enums.Professions.LUMBERJACK: 0.3,
+	Enums.Professions.MINER: 0.3,
+	Enums.Professions.BUILDER: 0.2,
+	Enums.Professions.FIGHTER: 0.1,
 }
 
 ## All buildings [building_id -> Building node]
@@ -150,7 +121,7 @@ func _initialize_resources() -> void:
 
 ## Initialize building type registry
 func _initialize_building_registry() -> void:
-	for building_type in BuildingType.values():
+	for building_type in Enums.BuildingType.values():
 		_buildings_by_type[building_type] = []
 
 #endregion
@@ -292,7 +263,7 @@ func get_viewer_roo(viewer_id: String) -> Node:
 
 
 ## Get all Roos with a specific profession
-func get_roos_by_profession(profession: Profession) -> Array[Node]:
+func get_roos_by_profession(profession: Enums.Professions) -> Array[Node]:
 	var result: Array[Node] = []
 	for roo in _roos.values():
 		if roo.has_method("get_profession") and roo.get_profession() == profession:
@@ -301,7 +272,7 @@ func get_roos_by_profession(profession: Profession) -> Array[Node]:
 
 
 ## Change a Roo's profession
-func set_roo_profession(roo: Node, new_profession: Profession) -> void:
+func set_roo_profession(roo: Node, new_profession: Enums.Professions) -> void:
 	if not roo.has_method("get_profession") or not roo.has_method("set_profession"):
 		push_warning("Settlement: Roo does not support profession methods")
 		return
@@ -315,7 +286,7 @@ func set_roo_profession(roo: Node, new_profession: Profession) -> void:
 
 #endregion
 
-#region AI Profession Distribution
+#region AI Enums.Professions Distribution
 
 ## Get the target profession distribution for AI Roos
 func get_ai_profession_targets() -> Dictionary:
@@ -324,7 +295,7 @@ func get_ai_profession_targets() -> Dictionary:
 
 ## Set target percentage for a profession (0.0-1.0)
 ## This is used by streamer/player to manage AI Roo distribution
-func set_ai_profession_target(profession: Profession, percentage: float) -> void:
+func set_ai_profession_target(profession: Enums.Professions, percentage: float) -> void:
 	percentage = clampf(percentage, 0.0, 1.0)
 	_ai_profession_targets[profession] = percentage
 	_normalize_profession_targets()
@@ -334,7 +305,7 @@ func set_ai_profession_target(profession: Profession, percentage: float) -> void
 ## Get current actual distribution of AI Roo professions
 func get_ai_profession_actual() -> Dictionary:
 	var distribution: Dictionary = {}
-	for profession in Profession.values():
+	for profession in Enums.Professions.values():
 		distribution[profession] = 0
 
 	var total_ai = _ai_roos.size()
@@ -378,7 +349,7 @@ func rebalance_ai_professions() -> void:
 
 	# Get current counts
 	var current_counts: Dictionary = {}
-	for profession in Profession.values():
+	for profession in Enums.Professions.values():
 		current_counts[profession] = 0
 
 	for roo in _ai_roos.values():
@@ -400,7 +371,7 @@ func rebalance_ai_professions() -> void:
 
 	# Assign to professions that need more
 	for roo in roos_to_reassign:
-		var best_profession = Profession.NONE
+		var best_profession = Enums.Professions.NONE
 		var best_deficit = 0
 
 		for profession in target_counts.keys():
@@ -409,7 +380,7 @@ func rebalance_ai_professions() -> void:
 				best_deficit = deficit
 				best_profession = profession
 
-		if best_profession != Profession.NONE:
+		if best_profession != Enums.Professions.NONE:
 			set_roo_profession(roo, best_profession)
 			current_counts[best_profession] = current_counts.get(best_profession, 0) + 1
 
@@ -418,7 +389,7 @@ func rebalance_ai_professions() -> void:
 #region Building Management
 
 ## Register a building in the settlement
-func register_building(building: Node, building_type: BuildingType) -> int:
+func register_building(building: Node, building_type: Enums.BuildingType) -> int:
 	var building_id = _next_building_id
 	_next_building_id += 1
 
@@ -437,7 +408,7 @@ func register_building(building: Node, building_type: BuildingType) -> int:
 ## Remove a building from the settlement
 func unregister_building(building: Node) -> void:
 	var building_id = building.get_meta("settlement_building_id", -1)
-	var building_type = building.get_meta("building_type", BuildingType.NONE)
+	var building_type = building.get_meta("building_type", Enums.BuildingType.NONE)
 
 	if building_id < 0:
 		return
@@ -449,12 +420,12 @@ func unregister_building(building: Node) -> void:
 
 
 ## Get all buildings of a type
-func get_buildings_by_type(building_type: BuildingType) -> Array:
+func get_buildings_by_type(building_type: Enums.BuildingType) -> Array:
 	return _buildings_by_type.get(building_type, []).duplicate()
 
 
 ## Get count of buildings by type
-func get_building_count(building_type: BuildingType) -> int:
+func get_building_count(building_type: Enums.BuildingType) -> int:
 	return _buildings_by_type.get(building_type, []).size()
 
 
@@ -464,7 +435,7 @@ func get_total_building_count() -> int:
 
 
 ## Find nearest building of type to a position
-func find_nearest_building(building_type: BuildingType, position: Vector2) -> Node:
+func find_nearest_building(building_type: Enums.BuildingType, position: Vector2) -> Node:
 	var buildings = get_buildings_by_type(building_type)
 	if buildings.is_empty():
 		return null
@@ -483,7 +454,7 @@ func find_nearest_building(building_type: BuildingType, position: Vector2) -> No
 
 
 ## Find building with available vacancy (for workers)
-func find_available_building(building_type: BuildingType, position: Vector2) -> Node:
+func find_available_building(building_type: Enums.BuildingType, position: Vector2) -> Node:
 	var buildings = get_buildings_by_type(building_type)
 	var available: Array[Node] = []
 
@@ -571,7 +542,7 @@ func get_progression_stage() -> ProgressionStage:
 ## Advance to next progression stage
 func advance_progression() -> void:
 	var old_stage = progression_stage
-	var new_stage = mini(progression_stage + 1, ProgressionStage.ADVANCED) as ProgressionStage
+	var new_stage = mini(progression_stage + 1, Enums.ProgressionStage.ADVANCED) as ProgressionStage
 
 	if new_stage != old_stage:
 		progression_stage = new_stage
@@ -581,24 +552,24 @@ func advance_progression() -> void:
 ## Check progression requirements and advance if met
 func check_progression() -> void:
 	match progression_stage:
-		ProgressionStage.FOUNDING:
+		Enums.ProgressionStage.FOUNDING:
 			# Advance when basic buildings exist
-			if get_building_count(BuildingType.LIVING_QUARTERS) >= 1 and get_building_count(BuildingType.DEPOT) >= 1:
+			if get_building_count(Enums.BuildingType.LIVING_QUARTERS) >= 1 and get_building_count(Enums.BuildingType.DEPOT) >= 1:
 				advance_progression()
 
-		ProgressionStage.ESTABLISHED:
+		Enums.ProgressionStage.ESTABLISHED:
 			# Advance when production buildings exist
-			if get_building_count(BuildingType.LUMBER_MILL) >= 1 and get_building_count(BuildingType.STONE_QUARRY) >= 1:
+			if get_building_count(Enums.BuildingType.LUMBER_MILL) >= 1 and get_building_count(Enums.BuildingType.STONE_QUARRY) >= 1:
 				advance_progression()
 
-		ProgressionStage.GROWING:
+		Enums.ProgressionStage.GROWING:
 			# Advance when territory and population grow
 			if get_population() >= 10 and _stats["territory_tiles_claimed"] >= 20:
 				advance_progression()
 
-		ProgressionStage.THRIVING:
+		Enums.ProgressionStage.THRIVING:
 			# Advance when research facility exists and jade collected
-			if get_building_count(BuildingType.RESEARCH_FACILITY) >= 1 and _stats["total_jade_collected"] >= 100:
+			if get_building_count(Enums.BuildingType.RESEARCH_FACILITY) >= 1 and _stats["total_jade_collected"] >= 100:
 				advance_progression()
 
 #endregion
@@ -636,7 +607,7 @@ func save_state() -> Dictionary:
 
 ## Load settlement state from dictionary
 func load_state(state: Dictionary) -> void:
-	progression_stage = state.get("progression_stage", ProgressionStage.FOUNDING)
+	progression_stage = state.get("progression_stage", Enums.ProgressionStage.FOUNDING)
 	_resources = state.get("resources", {}).duplicate()
 	_stats = state.get("stats", {}).duplicate()
 	_ai_profession_targets = state.get("ai_profession_targets", {}).duplicate()

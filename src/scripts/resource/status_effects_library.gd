@@ -74,7 +74,7 @@ static func _create_burn() -> StatusEffect:
 	effect.display_name = "Burn"
 	effect.description = "Deals fire damage over time"
 	effect.base_power = 5.0
-	effect.damage_type = HealthComponent.DamageType.FIRE
+	effect.damage_type = Enums.DamageType.FIRE
 	effect.can_stack = false
 	effect.max_stacks = 1
 	effect.is_beneficial = false
@@ -86,7 +86,7 @@ static func _create_bleed() -> StatusEffect:
 	effect.display_name = "Bleed"
 	effect.description = "Causes bleeding, dealing physical damage over time"
 	effect.base_power = 3.0
-	effect.damage_type = HealthComponent.DamageType.PHYSICAL
+	effect.damage_type = Enums.DamageType.PHYSICAL
 	effect.can_stack = true
 	effect.max_stacks = 5
 	effect.is_beneficial = false
@@ -98,7 +98,7 @@ static func _create_poison() -> StatusEffect:
 	effect.display_name = "Poison"
 	effect.description = "Poisoned, taking damage over time"
 	effect.base_power = 4.0
-	effect.damage_type = HealthComponent.DamageType.POISON
+	effect.damage_type = Enums.DamageType.POISON
 	effect.can_stack = false
 	effect.max_stacks = 1
 	effect.is_beneficial = false
@@ -110,7 +110,7 @@ static func _create_regeneration() -> StatusEffect:
 	effect.display_name = "Regeneration"
 	effect.description = "Restores health over time"
 	effect.base_power = 2.0
-	effect.damage_type = HealthComponent.DamageType.TRUE
+	effect.damage_type = Enums.DamageType.TRUE
 	effect.can_stack = false
 	effect.max_stacks = 1
 	effect.is_beneficial = true
@@ -122,7 +122,7 @@ static func _create_stun() -> StatusEffect:
 	effect.display_name = "Stunned"
 	effect.description = "Unable to act"
 	effect.base_power = 0.0
-	effect.damage_type = HealthComponent.DamageType.TRUE
+	effect.damage_type = Enums.DamageType.TRUE
 	effect.can_stack = false
 	effect.max_stacks = 1
 	effect.is_beneficial = false
@@ -134,7 +134,7 @@ static func _create_slow() -> StatusEffect:
 	effect.display_name = "Slowed"
 	effect.description = "Movement speed reduced"
 	effect.base_power = 0.0
-	effect.damage_type = HealthComponent.DamageType.TRUE
+	effect.damage_type = Enums.DamageType.TRUE
 	effect.can_stack = false
 	effect.max_stacks = 1
 	effect.is_beneficial = false
@@ -146,7 +146,7 @@ static func _create_freeze() -> StatusEffect:
 	effect.display_name = "Frozen"
 	effect.description = "Frozen solid, unable to move"
 	effect.base_power = 0.0
-	effect.damage_type = HealthComponent.DamageType.ICE
+	effect.damage_type = Enums.DamageType.ICE
 	effect.can_stack = false
 	effect.max_stacks = 1
 	effect.is_beneficial = false

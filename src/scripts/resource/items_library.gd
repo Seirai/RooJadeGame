@@ -7,7 +7,7 @@ class_name ItemsLibrary
 ##
 ## Usage:
 ##   var jade = ItemsLibrary.get_item(ItemsLibrary.Items.JADE)
-##   var consumables = ItemsLibrary.get_items_by_type(Item.ItemType.CONSUMABLE)
+##   var consumables = ItemsLibrary.get_items_by_type(Enums.ItemType.CONSUMABLE)
 ##
 ## To add new items:
 ##   1. Add the item to the Items enum
@@ -84,7 +84,7 @@ static func get_all_items() -> Array[Item]:
 
 
 ## Get items by type
-static func get_items_by_type(item_type: Item.ItemType) -> Array[Item]:
+static func get_items_by_type(item_type: Enums.ItemType) -> Array[Item]:
 	_ensure_initialized()
 	var result: Array[Item] = []
 	for item in _items.values():
@@ -94,7 +94,7 @@ static func get_items_by_type(item_type: Item.ItemType) -> Array[Item]:
 
 
 ## Get items by rarity
-static func get_items_by_rarity(rarity: Item.Rarity) -> Array[Item]:
+static func get_items_by_rarity(rarity: Enums.Rarity) -> Array[Item]:
 	_ensure_initialized()
 	var result: Array[Item] = []
 	for item in _items.values():
@@ -120,8 +120,8 @@ static func _create_wood() -> Item:
 	item.item_id = Items.WOOD
 	item.display_name = "Wood"
 	item.description = "Basic crafting material from trees."
-	item.item_type = Item.ItemType.MATERIAL
-	item.rarity = Item.Rarity.COMMON
+	item.item_type = Enums.ItemType.MATERIAL
+	item.rarity = Enums.Rarity.COMMON
 	item.stackable = true
 	item.max_stack = 999
 	item.base_value = 2
@@ -133,8 +133,8 @@ static func _create_stone() -> Item:
 	item.item_id = Items.STONE
 	item.display_name = "Stone"
 	item.description = "Basic crafting material from rocks."
-	item.item_type = Item.ItemType.MATERIAL
-	item.rarity = Item.Rarity.COMMON
+	item.item_type = Enums.ItemType.MATERIAL
+	item.rarity = Enums.Rarity.COMMON
 	item.stackable = true
 	item.max_stack = 999
 	item.base_value = 2
@@ -146,8 +146,8 @@ static func _create_jade() -> Item:
 	item.item_id = Items.JADE
 	item.display_name = "Jade"
 	item.description = "A piece of meteorite rock that is used as a central currency ."
-	item.item_type = Item.ItemType.MATERIAL
-	item.rarity = Item.Rarity.COMMON
+	item.item_type = Enums.ItemType.MATERIAL
+	item.rarity = Enums.Rarity.COMMON
 	item.stackable = true
 	item.max_stack = 999
 	item.base_value = 25

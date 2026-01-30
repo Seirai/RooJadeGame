@@ -19,6 +19,7 @@ config/icon="res://icon.svg"
 
 GameManager="*res://src/scripts/service/game_manager.gd"
 GUIDE="*res://addons/guide/guide.gd"
+Enums="*res://src/scripts/resource/enums.gd"
 
 [display]
 

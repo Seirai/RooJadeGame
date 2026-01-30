@@ -17,7 +17,7 @@ class_name StatusEffect
 @export var base_power: float = 0.0
 
 ## Damage type if this effect deals damage
-@export var damage_type: HealthComponent.DamageType = HealthComponent.DamageType.TRUE
+@export var damage_type: Enums.DamageType = Enums.DamageType.TRUE
 
 ## Whether this effect can stack multiple times
 @export var can_stack: bool = false

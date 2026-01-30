@@ -1,45 +1,21 @@
 extends Node
 class_name HealthComponent
 
-## Health state enum
-enum HealthState {
-	ALIVE,          # Normal functional state
-	DEAD,           # Entity has died (used for players, NPCs, mobs, and destructible objects)
-	RECOVERY,       # Cannot die, enters recovery mode instead
-	INCAPACITATED   # Downed but not dead (e.g., for revive mechanics)
-}
-
-## Damage types enum for reference
-enum DamageType {
-	PHYSICAL,
-	FIRE,
-	ICE,
-	LIGHTNING,
-	POISON,
-	MAGIC,
-	TRUE  # Ignores resistances
-}
-
-## Team enum for damage filtering
-## Determines which entities can damage each other
-enum Team {
-	NEUTRAL,        # Can be damaged by anyone, damages no one by default
-	PLAYER,         # Player and player allies
-	ENEMY,          # Enemies and hostile NPCs
-	ENVIRONMENT,    # Environmental hazards (damages all except ENVIRONMENT)
-	DESTRUCTIBLE    # Destructible objects (damaged by PLAYER and ENEMY)
-}
+## Uses centralized enums from Enums autoload:
+## - Enums.HealthState (ALIVE, DEAD, RECOVERY, INCAPACITATED)
+## - Enums.DamageType (PHYSICAL, FIRE, ICE, LIGHTNING, POISON, MAGIC, TRUE)
+## - Enums.Team (NEUTRAL, PLAYER, ENEMY, ENVIRONMENT, DESTRUCTIBLE)
 
 ## Core health properties
 @export var max_health: float = 100.0
 @export var current_health: float = 100.0
-@export var death_behavior: HealthState = HealthState.DEAD  # What state to enter when health reaches 0
+@export var death_behavior: Enums.HealthState = Enums.HealthState.DEAD  # What state to enter when health reaches 0
 
 ## Team settings
 @export_group("Team")
-@export var team: Team = Team.NEUTRAL
+@export var team: Enums.Team = Enums.Team.NEUTRAL
 @export var friendly_fire: bool = false  ## If true, same team can damage this entity
-@export var damageable_by_teams: Array[Team] = []  ## Override: only these teams can damage (empty = use default rules)
+@export var damageable_by_teams: Array[Enums.Team] = []  ## Override: only these teams can damage (empty = use default rules)
 
 ## Shield system
 @export_group("Shield")
@@ -70,7 +46,7 @@ enum Team {
 
 ## State
 var current_shield: float = 0.0
-var current_state: HealthState = HealthState.ALIVE
+var current_state: Enums.HealthState = Enums.HealthState.ALIVE
 var active_status_effects: Array[StatusEffectInstance] = []
 
 ## Shield regeneration timer
@@ -87,15 +63,15 @@ signal died()
 signal incapacitated()
 signal entered_recovery()
 signal revived()
-signal state_changed(old_state: HealthState, new_state: HealthState)
+signal state_changed(old_state: Enums.HealthState, new_state: Enums.HealthState)
 signal status_effect_applied(effect: StatusEffectInstance)
 signal status_effect_removed(effect: StatusEffectInstance)
 signal status_effect_tick(effect: StatusEffectInstance, delta: float)
-signal damage_blocked(amount: float, attacker_team: Team, reason: String)
+signal damage_blocked(amount: float, attacker_team: Enums.Team, reason: String)
 
 func _ready() -> void:
 	current_shield = max_shield
-	current_state = HealthState.ALIVE
+	current_state = Enums.HealthState.ALIVE
 
 func _process(delta: float) -> void:
 	# Only process if in an active state
@@ -116,10 +92,10 @@ func _process(delta: float) -> void:
 	_process_status_effects(delta)
 
 	# Auto-recover from RECOVERY state when health is full
-	if current_state == HealthState.RECOVERY and current_health >= max_health:
-		_set_state(HealthState.ALIVE)
+	if current_state == Enums.HealthState.RECOVERY and current_health >= max_health:
+		_set_state(Enums.HealthState.ALIVE)
 
-func take_damage(amount: float, damage_type: int = DamageType.PHYSICAL, attacker_team: Team = Team.NEUTRAL) -> void:
+func take_damage(amount: float, damage_type: int = Enums.DamageType.PHYSICAL, attacker_team: Enums.Team = Enums.Team.NEUTRAL) -> void:
 	if not _is_active_state() or amount <= 0:
 		return
 
@@ -146,7 +122,7 @@ func take_damage(amount: float, damage_type: int = DamageType.PHYSICAL, attacker
 	# Apply remaining damage to health
 	if modified_damage > 0:
 		current_health = max(0, current_health - modified_damage)
-		damage_taken.emit(modified_damage, DamageType.keys()[damage_type])
+		damage_taken.emit(modified_damage, Enums.DamageType.keys()[damage_type])
 		health_changed.emit(current_health, max_health)
 
 		if current_health <= 0:
@@ -154,7 +130,7 @@ func take_damage(amount: float, damage_type: int = DamageType.PHYSICAL, attacker
 
 
 ## Check if this entity can be damaged by the given team
-func can_be_damaged_by(attacker_team: Team) -> bool:
+func can_be_damaged_by(attacker_team: Enums.Team) -> bool:
 	# If custom damageable_by_teams is set, use that exclusively
 	if damageable_by_teams.size() > 0:
 		return attacker_team in damageable_by_teams
@@ -165,51 +141,51 @@ func can_be_damaged_by(attacker_team: Team) -> bool:
 
 	# Default team damage rules
 	match team:
-		Team.NEUTRAL:
+		Enums.Team.NEUTRAL:
 			# Neutral can be damaged by anyone
 			return true
 
-		Team.PLAYER:
+		Enums.Team.PLAYER:
 			# Player is damaged by ENEMY and ENVIRONMENT
-			return attacker_team in [Team.ENEMY, Team.ENVIRONMENT]
+			return attacker_team in [Enums.Team.ENEMY, Enums.Team.ENVIRONMENT]
 
-		Team.ENEMY:
+		Enums.Team.ENEMY:
 			# Enemy is damaged by PLAYER and ENVIRONMENT
-			return attacker_team in [Team.PLAYER, Team.ENVIRONMENT]
+			return attacker_team in [Enums.Team.PLAYER, Enums.Team.ENVIRONMENT]
 
-		Team.ENVIRONMENT:
+		Enums.Team.ENVIRONMENT:
 			# Environment typically can't be damaged
 			return false
 
-		Team.DESTRUCTIBLE:
+		Enums.Team.DESTRUCTIBLE:
 			# Destructible is damaged by PLAYER, ENEMY, and ENVIRONMENT
-			return attacker_team in [Team.PLAYER, Team.ENEMY, Team.ENVIRONMENT]
+			return attacker_team in [Enums.Team.PLAYER, Enums.Team.ENEMY, Enums.Team.ENVIRONMENT]
 
 	return true
 
 
 ## Check if this entity can damage the target team
-func can_damage(target_team: Team) -> bool:
+func can_damage(target_team: Enums.Team) -> bool:
 	# Check if target would accept damage from our team
 	# This is a convenience method for pre-checking
 	match team:
-		Team.NEUTRAL:
+		Enums.Team.NEUTRAL:
 			# Neutral doesn't deal damage by default
 			return false
 
-		Team.PLAYER:
+		Enums.Team.PLAYER:
 			# Player damages ENEMY, DESTRUCTIBLE, and NEUTRAL
-			return target_team in [Team.ENEMY, Team.DESTRUCTIBLE, Team.NEUTRAL]
+			return target_team in [Enums.Team.ENEMY, Enums.Team.DESTRUCTIBLE, Enums.Team.NEUTRAL]
 
-		Team.ENEMY:
+		Enums.Team.ENEMY:
 			# Enemy damages PLAYER, DESTRUCTIBLE, and NEUTRAL
-			return target_team in [Team.PLAYER, Team.DESTRUCTIBLE, Team.NEUTRAL]
+			return target_team in [Enums.Team.PLAYER, Enums.Team.DESTRUCTIBLE, Enums.Team.NEUTRAL]
 
-		Team.ENVIRONMENT:
+		Enums.Team.ENVIRONMENT:
 			# Environment damages everyone except ENVIRONMENT
-			return target_team != Team.ENVIRONMENT
+			return target_team != Enums.Team.ENVIRONMENT
 
-		Team.DESTRUCTIBLE:
+		Enums.Team.DESTRUCTIBLE:
 			# Destructible doesn't deal damage
 			return false
 
@@ -217,12 +193,12 @@ func can_damage(target_team: Team) -> bool:
 
 
 ## Set the team for this entity
-func set_team(new_team: Team) -> void:
+func set_team(new_team: Enums.Team) -> void:
 	team = new_team
 
 
 ## Get the team for this entity
-func get_team() -> Team:
+func get_team() -> Enums.Team:
 	return team
 
 func heal(amount: float) -> void:
@@ -230,7 +206,7 @@ func heal(amount: float) -> void:
 		return
 
 	# Allow healing in RECOVERY state
-	if current_state != HealthState.ALIVE and current_state != HealthState.RECOVERY:
+	if current_state != Enums.HealthState.ALIVE and current_state != Enums.HealthState.RECOVERY:
 		return
 
 	var old_health = current_health
@@ -315,13 +291,13 @@ func get_status_effect(effect_id: int) -> StatusEffectInstance:
 
 func revive(health_percentage: float = 1.0) -> void:
 	# Can only revive if not already alive
-	if current_state == HealthState.ALIVE:
+	if current_state == Enums.HealthState.ALIVE:
 		return
 
 	current_health = max_health * clamp(health_percentage, 0.0, 1.0)
 	current_shield = max_shield
 	clear_all_status_effects()
-	_set_state(HealthState.ALIVE)
+	_set_state(Enums.HealthState.ALIVE)
 	revived.emit()
 	health_changed.emit(current_health, max_health)
 	shield_changed.emit(current_shield, max_shield)
@@ -333,36 +309,36 @@ func _handle_death() -> void:
 	var new_state = death_behavior
 
 	# If set to RECOVERY, start regenerating
-	if new_state == HealthState.RECOVERY:
-		_set_state(HealthState.RECOVERY)
+	if new_state == Enums.HealthState.RECOVERY:
+		_set_state(Enums.HealthState.RECOVERY)
 		entered_recovery.emit()
 	else:
 		_set_state(new_state)
 
 		# Emit appropriate signal based on state
 		match new_state:
-			HealthState.DEAD:
+			Enums.HealthState.DEAD:
 				died.emit()
-			HealthState.INCAPACITATED:
+			Enums.HealthState.INCAPACITATED:
 				incapacitated.emit()
 
 func _apply_damage_resistance(damage: float, damage_type: int) -> float:
-	if damage_type == DamageType.TRUE:
+	if damage_type == Enums.DamageType.TRUE:
 		return damage
 
 	var resistance: float = 0.0
 	match damage_type:
-		DamageType.PHYSICAL:
+		Enums.DamageType.PHYSICAL:
 			resistance = physical_resistance
-		DamageType.FIRE:
+		Enums.DamageType.FIRE:
 			resistance = fire_resistance
-		DamageType.ICE:
+		Enums.DamageType.ICE:
 			resistance = ice_resistance
-		DamageType.LIGHTNING:
+		Enums.DamageType.LIGHTNING:
 			resistance = lightning_resistance
-		DamageType.POISON:
+		Enums.DamageType.POISON:
 			resistance = poison_resistance
-		DamageType.MAGIC:
+		Enums.DamageType.MAGIC:
 			resistance = magic_resistance
 
 	return damage * (1.0 - resistance)
@@ -425,7 +401,7 @@ func _get_status_resistance(effect_id: int) -> float:
 		_:
 			return 0.0
 
-func _set_state(new_state: HealthState) -> void:
+func _set_state(new_state: Enums.HealthState) -> void:
 	if current_state == new_state:
 		return
 
@@ -434,20 +410,20 @@ func _set_state(new_state: HealthState) -> void:
 	state_changed.emit(old_state, new_state)
 
 func _is_active_state() -> bool:
-	return current_state == HealthState.ALIVE or current_state == HealthState.RECOVERY
+	return current_state == Enums.HealthState.ALIVE or current_state == Enums.HealthState.RECOVERY
 
 ## Public state query functions
-func get_state() -> HealthState:
+func get_state() -> Enums.HealthState:
 	return current_state
 
 func is_alive() -> bool:
-	return current_state == HealthState.ALIVE
+	return current_state == Enums.HealthState.ALIVE
 
 func is_dead() -> bool:
-	return current_state == HealthState.DEAD
+	return current_state == Enums.HealthState.DEAD
 
 func is_in_recovery() -> bool:
-	return current_state == HealthState.RECOVERY
+	return current_state == Enums.HealthState.RECOVERY
 
 func is_incapacitated() -> bool:
-	return current_state == HealthState.INCAPACITATED
+	return current_state == Enums.HealthState.INCAPACITATED

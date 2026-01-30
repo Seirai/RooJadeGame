@@ -9,26 +9,9 @@ class_name Item
 ##   - Key items (quest items, keys)
 ##   - Materials (crafting components)
 
-#region Enums
-
-enum ItemType {
-	MISC,           ## Generic item
-	COLLECTIBLE,    ## Picked up and counted (coins, gems)
-	CONSUMABLE,     ## Single-use items (potions, food)
-	EQUIPMENT,      ## Wearable/usable items
-	KEY_ITEM,       ## Quest/progression items
-	MATERIAL        ## Crafting materials
-}
-
-enum Rarity {
-	COMMON,         ## White/Gray - 60% base
-	UNCOMMON,       ## Green - 25% base
-	RARE,           ## Blue - 10% base
-	EPIC,           ## Purple - 4% base
-	LEGENDARY       ## Orange/Gold - 1% base
-}
-
-#endregion
+## Uses centralized enums from Enums autoload:
+## - Enums.ItemType (MISC, COLLECTIBLE, CONSUMABLE, EQUIPMENT, KEY_ITEM, MATERIAL)
+## - Enums.Rarity (COMMON, UNCOMMON, RARE, EPIC, LEGENDARY)
 
 #region Properties
 
@@ -42,10 +25,10 @@ enum Rarity {
 @export_multiline var description: String = ""
 
 ## Item category
-@export var item_type: ItemType = ItemType.MISC
+@export var item_type: Enums.ItemType = Enums.ItemType.MISC
 
 ## Item rarity
-@export var rarity: Rarity = Rarity.COMMON
+@export var rarity: Enums.Rarity = Enums.Rarity.COMMON
 
 ## Icon for UI display
 @export var icon: Texture2D = null
@@ -72,22 +55,22 @@ enum Rarity {
 ## Get the color associated with this item's rarity
 func get_rarity_color() -> Color:
 	match rarity:
-		Rarity.COMMON:
+		Enums.Rarity.COMMON:
 			return Color.WHITE
-		Rarity.UNCOMMON:
+		Enums.Rarity.UNCOMMON:
 			return Color.GREEN
-		Rarity.RARE:
+		Enums.Rarity.RARE:
 			return Color.DODGER_BLUE
-		Rarity.EPIC:
+		Enums.Rarity.EPIC:
 			return Color.PURPLE
-		Rarity.LEGENDARY:
+		Enums.Rarity.LEGENDARY:
 			return Color.ORANGE
 	return Color.WHITE
 
 
 ## Get the display string for rarity
 func get_rarity_name() -> String:
-	return Rarity.keys()[rarity]
+	return Enums.Rarity.keys()[rarity]
 
 
 ## Check if this item can stack with another item
