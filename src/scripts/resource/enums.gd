@@ -73,6 +73,19 @@ enum ProgressionStage {
 
 #endregion
 
+#region Research
+
+## Research technologies that can be unlocked
+enum ResearchTech {
+	ADVANCED_TOOLS,     ## Increases worker efficiency
+	JADE_REFINING,      ## Improves jade extraction rate
+	FORTIFICATIONS,     ## Strengthens settlement defenses
+	ADVANCED_MEDICINE,  ## Unlocks recovery mechanics
+	EXPLORATION_GEAR,   ## Scouts cover more territory
+}
+
+#endregion
+
 #region Items
 
 ## Item categories

@@ -1,44 +1,19 @@
-## Settlement System
+## Settlement System - Facade
 ##
-## Handles tracking of the entire settlement's state, stats, inventory.
-## Keeps track of number of inhabitants (Roos), resources, buildings, etc.
-## Manages AI Roo profession distribution and territory claims.
+## Coordinator for all settlement subsystems. Owns all runtime state
+## and delegates logic to specialized managers.
 ##
 ## Core Responsibilities:
-##   - Resource inventory (Wood, Stone, Jade)
-##   - Roo population tracking (viewer Roos + AI Roos)
-##   - AI Roo profession distribution management
-##   - Building/structure registry
-##   - Territory/tile management
-##   - Settlement progression state
+##   - Owns all settlement state (single source of truth)
+##   - Initializes and coordinates managers
+##   - Provides public API that delegates to managers
+##   - Handles serialization/deserialization
+##   - Manages territory and progression
 
 extends Node
 class_name Settlement
 
-const ProfessionManager = preload("res://src/scenes/systems/profession_manager.gd")
-
-## Uses centralized enums from Enums autoload:
-## - Enums.BuildingType (NONE, LIVING_QUARTERS, LUMBER_MILL, STONE_QUARRY, etc.)
-## - Enums.ProgressionStage (FOUNDING, ESTABLISHED, GROWING, THRIVING, ADVANCED)
-
 #region Signals
-
-## Resource signals
-signal resource_changed(resource_id: int, old_amount: int, new_amount: int)
-signal resource_deposited(resource_id: int, amount: int, depositor: Node)
-signal resource_withdrawn(resource_id: int, amount: int)
-
-## Roo signals
-signal roo_joined(roo: Node, is_viewer: bool)
-signal roo_left(roo: Node)
-signal roo_profession_changed(roo: Node, old_profession: Enums.Professions, new_profession: Enums.Professions)
-signal ai_profession_distribution_changed()
-
-## Building signals
-signal building_placed(building: Node, building_type: Enums.BuildingType)
-signal building_completed(building: Node, building_type: Enums.BuildingType)
-signal building_destroyed(building: Node, building_type: Enums.BuildingType)
-signal building_upgraded(building: Node, old_level: int, new_level: int)
 
 ## Territory signals
 signal territory_claimed(tile_position: Vector2i)
@@ -50,7 +25,7 @@ signal progression_stage_changed(old_stage: Enums.ProgressionStage, new_stage: E
 
 #endregion
 
-#region Properties
+#region State (Settlement owns all data)
 
 ## Current progression stage
 var progression_stage: Enums.ProgressionStage = Enums.ProgressionStage.FOUNDING
@@ -68,7 +43,6 @@ var _viewer_roos: Dictionary = {}
 var _ai_roos: Dictionary = {}
 
 ## AI profession distribution targets [Enums.Professions -> target_percentage (0.0-1.0)]
-## This is what the streamer/player configures
 var _ai_profession_targets: Dictionary = {
 	Enums.Professions.SCOUT: 0.1,
 	Enums.Professions.LUMBERJACK: 0.3,
@@ -83,8 +57,14 @@ var _buildings: Dictionary = {}
 ## Buildings by type [BuildingType -> Array of Building nodes]
 var _buildings_by_type: Dictionary = {}
 
-## Claimed territory tiles (settlement area)
-var _claimed_tiles: Dictionary = {}  # Vector2i -> claim_data
+## Claimed territory tiles [Vector2i -> claim_data]
+var _claimed_tiles: Dictionary = {}
+
+## Unlocked research technologies
+var _unlocked_techs: Array = []
+
+## Research queue
+var _research_queue: Array = []
 
 ## Settlement statistics
 var _stats: Dictionary = {
@@ -96,387 +76,173 @@ var _stats: Dictionary = {
 	"threats_defeated": 0,
 }
 
-## Next unique ID for Roos
-var _next_roo_id: int = 0
+#endregion
 
-## Next unique ID for buildings
-var _next_building_id: int = 0
+#region Managers
+
+var _resource_manager: ResourceManager
+var _population_manager: PopulationManager
+var _profession_manager: ProfessionManager
+var _building_manager: BuildingManager
+var _research_manager: ResearchManager
 
 #endregion
 
 #region Lifecycle
 
 func _ready() -> void:
-	_initialize_resources()
-	_initialize_building_registry()
+	_create_managers()
+	_init_managers()
 	print("Settlement system initialized")
 
 
-## Initialize resource inventory with zero amounts
-func _initialize_resources() -> void:
-	_resources[ItemsLibrary.Items.WOOD] = 0
-	_resources[ItemsLibrary.Items.STONE] = 0
-	_resources[ItemsLibrary.Items.JADE] = 0
+func _process(delta: float) -> void:
+	_research_manager.process_research(delta)
 
 
-## Initialize building type registry
-func _initialize_building_registry() -> void:
-	for building_type in Enums.BuildingType.values():
-		_buildings_by_type[building_type] = []
+func _create_managers() -> void:
+	_resource_manager = ResourceManager.new()
+	_resource_manager.name = "ResourceManager"
+
+	_population_manager = PopulationManager.new()
+	_population_manager.name = "PopulationManager"
+
+	_profession_manager = ProfessionManager.new()
+	_profession_manager.name = "ProfessionManager"
+
+	_building_manager = BuildingManager.new()
+	_building_manager.name = "BuildingManager"
+
+	_research_manager = ResearchManager.new()
+	_research_manager.name = "ResearchManager"
+
+	add_child(_resource_manager)
+	add_child(_population_manager)
+	add_child(_profession_manager)
+	add_child(_building_manager)
+	add_child(_research_manager)
+
+
+func _init_managers() -> void:
+	# Init order matters - match dependency order
+	_resource_manager.init(_resources, _stats)
+	_population_manager.init(_roos, _viewer_roos, _ai_roos)
+	_profession_manager.init(_ai_profession_targets, _population_manager)
+	_building_manager.init(_buildings, _buildings_by_type, _stats)
+	_research_manager.init(_unlocked_techs, _research_queue, _resource_manager)
 
 #endregion
 
-#region Resource Management
+#region Resource API (delegates to ResourceManager)
 
-## Get current amount of a resource
 func get_resource(resource_id: int) -> int:
-	return _resources.get(resource_id, 0)
+	return _resource_manager.get_resource(resource_id)
 
-
-## Get all resources as dictionary
 func get_all_resources() -> Dictionary:
-	return _resources.duplicate()
+	return _resource_manager.get_all_resources()
 
-
-## Add resources to settlement inventory
 func deposit_resource(resource_id: int, amount: int, depositor: Node = null) -> void:
-	if amount <= 0:
-		return
+	_resource_manager.deposit(resource_id, amount, depositor)
 
-	var old_amount = _resources.get(resource_id, 0)
-	var new_amount = old_amount + amount
-	_resources[resource_id] = new_amount
-
-	# Track statistics
-	match resource_id:
-		ItemsLibrary.Items.WOOD:
-			_stats["total_wood_collected"] += amount
-		ItemsLibrary.Items.STONE:
-			_stats["total_stone_collected"] += amount
-		ItemsLibrary.Items.JADE:
-			_stats["total_jade_collected"] += amount
-
-	resource_changed.emit(resource_id, old_amount, new_amount)
-	resource_deposited.emit(resource_id, amount, depositor)
-
-
-## Remove resources from settlement inventory
-## Returns actual amount withdrawn (may be less if insufficient)
 func withdraw_resource(resource_id: int, amount: int) -> int:
-	if amount <= 0:
-		return 0
+	return _resource_manager.withdraw(resource_id, amount)
 
-	var old_amount = _resources.get(resource_id, 0)
-	var actual_withdraw = mini(amount, old_amount)
-
-	if actual_withdraw > 0:
-		var new_amount = old_amount - actual_withdraw
-		_resources[resource_id] = new_amount
-		resource_changed.emit(resource_id, old_amount, new_amount)
-		resource_withdrawn.emit(resource_id, actual_withdraw)
-
-	return actual_withdraw
-
-
-## Check if settlement has enough of a resource
 func has_resource(resource_id: int, amount: int) -> bool:
-	return get_resource(resource_id) >= amount
+	return _resource_manager.has_resource(resource_id, amount)
 
-
-## Check if settlement can afford a cost (dictionary of resource_id -> amount)
 func can_afford(cost: Dictionary) -> bool:
-	for resource_id in cost.keys():
-		if not has_resource(resource_id, cost[resource_id]):
-			return false
-	return true
+	return _resource_manager.can_afford(cost)
 
-
-## Spend resources (returns true if successful)
 func spend_resources(cost: Dictionary) -> bool:
-	if not can_afford(cost):
-		return false
-
-	for resource_id in cost.keys():
-		withdraw_resource(resource_id, cost[resource_id])
-	return true
+	return _resource_manager.spend(cost)
 
 #endregion
 
-#region Roo Management
+#region Population API (delegates to PopulationManager)
 
-## Get total Roo population
 func get_population() -> int:
-	return _roos.size()
+	return _population_manager.get_population()
 
-
-## Get viewer Roo count
 func get_viewer_count() -> int:
-	return _viewer_roos.size()
+	return _population_manager.get_viewer_count()
 
-
-## Get AI Roo count
 func get_ai_count() -> int:
-	return _ai_roos.size()
+	return _population_manager.get_ai_count()
 
-
-## Register a new Roo in the settlement
 func register_roo(roo: Node, is_viewer: bool, viewer_id: String = "") -> int:
-	var roo_id = _next_roo_id
-	_next_roo_id += 1
+	return _population_manager.register_roo(roo, is_viewer, viewer_id)
 
-	_roos[roo_id] = roo
-
-	if is_viewer and viewer_id != "":
-		_viewer_roos[viewer_id] = roo
-	else:
-		_ai_roos[roo_id] = roo
-
-	roo.set_meta("settlement_roo_id", roo_id)
-	roo.set_meta("is_viewer_roo", is_viewer)
-
-	roo_joined.emit(roo, is_viewer)
-	return roo_id
-
-
-## Remove a Roo from the settlement
 func unregister_roo(roo: Node) -> void:
-	var roo_id = roo.get_meta("settlement_roo_id", -1)
-	if roo_id < 0:
-		return
+	_population_manager.unregister_roo(roo)
 
-	_roos.erase(roo_id)
-
-	if roo.get_meta("is_viewer_roo", false):
-		for viewer_id in _viewer_roos.keys():
-			if _viewer_roos[viewer_id] == roo:
-				_viewer_roos.erase(viewer_id)
-				break
-	else:
-		_ai_roos.erase(roo_id)
-
-	roo_left.emit(roo)
-
-
-## Get a Roo by viewer ID
 func get_viewer_roo(viewer_id: String) -> Node:
-	return _viewer_roos.get(viewer_id, null)
+	return _population_manager.get_viewer_roo(viewer_id)
 
-
-## Get all Roos with a specific profession
 func get_roos_by_profession(profession: Enums.Professions) -> Array[Node]:
-	var result: Array[Node] = []
-	for roo in _roos.values():
-		if roo.has_method("get_profession") and roo.get_profession() == profession:
-			result.append(roo)
-	return result
+	return _population_manager.get_roos_by_profession(profession)
 
-
-## Change a Roo's profession
 func set_roo_profession(roo: Node, new_profession: Enums.Professions) -> void:
-	if not roo.has_method("get_profession") or not roo.has_method("set_profession"):
-		push_warning("Settlement: Roo does not support profession methods")
-		return
-
-	var old_profession = roo.get_profession()
-	if old_profession == new_profession:
-		return
-
-	roo.set_profession(new_profession)
-	roo_profession_changed.emit(roo, old_profession, new_profession)
+	_population_manager.set_roo_profession(roo, new_profession)
 
 #endregion
 
-#region AI Enums.Professions Distribution
+#region Profession API (delegates to ProfessionManager)
 
-## Get the target profession distribution for AI Roos
 func get_ai_profession_targets() -> Dictionary:
-	return _ai_profession_targets.duplicate()
+	return _profession_manager.get_targets()
 
-
-## Set target percentage for a profession (0.0-1.0)
-## This is used by streamer/player to manage AI Roo distribution
 func set_ai_profession_target(profession: Enums.Professions, percentage: float) -> void:
-	percentage = clampf(percentage, 0.0, 1.0)
-	_ai_profession_targets[profession] = percentage
-	_normalize_profession_targets()
-	ai_profession_distribution_changed.emit()
+	_profession_manager.set_target(profession, percentage)
 
-
-## Get current actual distribution of AI Roo professions
 func get_ai_profession_actual() -> Dictionary:
-	var distribution: Dictionary = {}
-	for profession in Enums.Professions.values():
-		distribution[profession] = 0
+	return _profession_manager.get_distribution()
 
-	var total_ai = _ai_roos.size()
-	if total_ai == 0:
-		return distribution
-
-	for roo in _ai_roos.values():
-		if roo.has_method("get_profession"):
-			var prof = roo.get_profession()
-			distribution[prof] = distribution.get(prof, 0) + 1
-
-	# Convert to percentages
-	for profession in distribution.keys():
-		distribution[profession] = float(distribution[profession]) / float(total_ai)
-
-	return distribution
-
-
-## Normalize profession targets to sum to 1.0
-func _normalize_profession_targets() -> void:
-	var total = 0.0
-	for percentage in _ai_profession_targets.values():
-		total += percentage
-
-	if total > 0.0 and total != 1.0:
-		for profession in _ai_profession_targets.keys():
-			_ai_profession_targets[profession] /= total
-
-
-## Rebalance AI Roos to match target distribution
-## Called periodically or when targets change
 func rebalance_ai_professions() -> void:
-	var total_ai = _ai_roos.size()
-	if total_ai == 0:
-		return
-
-	# Calculate target counts for each profession
-	var target_counts: Dictionary = {}
-	for profession in _ai_profession_targets.keys():
-		target_counts[profession] = roundi(_ai_profession_targets[profession] * total_ai)
-
-	# Get current counts
-	var current_counts: Dictionary = {}
-	for profession in Enums.Professions.values():
-		current_counts[profession] = 0
-
-	for roo in _ai_roos.values():
-		if roo.has_method("get_profession"):
-			var prof = roo.get_profession()
-			current_counts[prof] = current_counts.get(prof, 0) + 1
-
-	# Find Roos that need reassignment (excess in current profession)
-	var roos_to_reassign: Array[Node] = []
-	for roo in _ai_roos.values():
-		if roo.has_method("get_profession"):
-			var prof = roo.get_profession()
-			var target = target_counts.get(prof, 0)
-			var current = current_counts.get(prof, 0)
-
-			if current > target:
-				roos_to_reassign.append(roo)
-				current_counts[prof] -= 1
-
-	# Assign to professions that need more
-	for roo in roos_to_reassign:
-		var best_profession = Enums.Professions.NONE
-		var best_deficit = 0
-
-		for profession in target_counts.keys():
-			var deficit = target_counts[profession] - current_counts.get(profession, 0)
-			if deficit > best_deficit:
-				best_deficit = deficit
-				best_profession = profession
-
-		if best_profession != Enums.Professions.NONE:
-			set_roo_profession(roo, best_profession)
-			current_counts[best_profession] = current_counts.get(best_profession, 0) + 1
+	_profession_manager.rebalance_ai()
 
 #endregion
 
-#region Building Management
+#region Building API (delegates to BuildingManager)
 
-## Register a building in the settlement
 func register_building(building: Node, building_type: Enums.BuildingType) -> int:
-	var building_id = _next_building_id
-	_next_building_id += 1
+	return _building_manager.register(building, building_type)
 
-	_buildings[building_id] = building
-	_buildings_by_type[building_type].append(building)
-
-	building.set_meta("settlement_building_id", building_id)
-	building.set_meta("building_type", building_type)
-
-	building_placed.emit(building, building_type)
-	_stats["buildings_constructed"] += 1
-
-	return building_id
-
-
-## Remove a building from the settlement
 func unregister_building(building: Node) -> void:
-	var building_id = building.get_meta("settlement_building_id", -1)
-	var building_type = building.get_meta("building_type", Enums.BuildingType.NONE)
+	_building_manager.unregister(building)
 
-	if building_id < 0:
-		return
-
-	_buildings.erase(building_id)
-	_buildings_by_type[building_type].erase(building)
-
-	building_destroyed.emit(building, building_type)
-
-
-## Get all buildings of a type
 func get_buildings_by_type(building_type: Enums.BuildingType) -> Array:
-	return _buildings_by_type.get(building_type, []).duplicate()
+	return _building_manager.get_by_type(building_type)
 
-
-## Get count of buildings by type
 func get_building_count(building_type: Enums.BuildingType) -> int:
-	return _buildings_by_type.get(building_type, []).size()
+	return _building_manager.get_count(building_type)
 
-
-## Get total building count
 func get_total_building_count() -> int:
-	return _buildings.size()
+	return _building_manager.get_total_count()
 
-
-## Find nearest building of type to a position
 func find_nearest_building(building_type: Enums.BuildingType, position: Vector2) -> Node:
-	var buildings = get_buildings_by_type(building_type)
-	if buildings.is_empty():
-		return null
+	return _building_manager.find_nearest(building_type, position)
 
-	var nearest: Node = null
-	var nearest_dist: float = INF
-
-	for building in buildings:
-		if building is Node2D:
-			var dist = position.distance_squared_to(building.global_position)
-			if dist < nearest_dist:
-				nearest_dist = dist
-				nearest = building
-
-	return nearest
-
-
-## Find building with available vacancy (for workers)
 func find_available_building(building_type: Enums.BuildingType, position: Vector2) -> Node:
-	var buildings = get_buildings_by_type(building_type)
-	var available: Array[Node] = []
+	return _building_manager.find_available(building_type, position)
 
-	for building in buildings:
-		if building.has_method("has_vacancy") and building.has_vacancy():
-			available.append(building)
+#endregion
 
-	if available.is_empty():
-		return null
+#region Research API (delegates to ResearchManager)
 
-	# Find nearest available
-	var nearest: Node = null
-	var nearest_dist: float = INF
+func is_tech_unlocked(tech_id: Enums.ResearchTech) -> bool:
+	return _research_manager.is_unlocked(tech_id)
 
-	for building in available:
-		if building is Node2D:
-			var dist = position.distance_squared_to(building.global_position)
-			if dist < nearest_dist:
-				nearest_dist = dist
-				nearest = building
+func can_research(tech_id: Enums.ResearchTech) -> bool:
+	return _research_manager.can_research(tech_id)
 
-	return nearest
+func start_research(tech_id: Enums.ResearchTech) -> bool:
+	return _research_manager.start_research(tech_id)
+
+func get_available_research() -> Array[Enums.ResearchTech]:
+	return _research_manager.get_available()
+
+func get_research_progress() -> float:
+	return _research_manager.get_progress()
 
 #endregion
 
@@ -489,10 +255,10 @@ func claim_tile(tile_position: Vector2i) -> void:
 
 	_claimed_tiles[tile_position] = {
 		"claimed_at": Time.get_unix_time_from_system(),
-		"claimed_by": null,  # Roo reference if applicable
+		"claimed_by": null,
 	}
 
-	_stats["territory_tiles_claimed"] += 1
+	_stats["territory_tiles_claimed"] = _stats.get("territory_tiles_claimed", 0) + 1
 	territory_claimed.emit(tile_position)
 
 
@@ -535,14 +301,14 @@ func report_threat(position: Vector2, threat_type: String) -> void:
 #region Progression
 
 ## Get current progression stage
-func get_progression_stage() -> ProgressionStage:
+func get_progression_stage() -> Enums.ProgressionStage:
 	return progression_stage
 
 
 ## Advance to next progression stage
 func advance_progression() -> void:
 	var old_stage = progression_stage
-	var new_stage = mini(progression_stage + 1, Enums.ProgressionStage.ADVANCED) as ProgressionStage
+	var new_stage = mini(progression_stage + 1, Enums.ProgressionStage.ADVANCED) as Enums.ProgressionStage
 
 	if new_stage != old_stage:
 		progression_stage = new_stage
@@ -553,22 +319,18 @@ func advance_progression() -> void:
 func check_progression() -> void:
 	match progression_stage:
 		Enums.ProgressionStage.FOUNDING:
-			# Advance when basic buildings exist
 			if get_building_count(Enums.BuildingType.LIVING_QUARTERS) >= 1 and get_building_count(Enums.BuildingType.DEPOT) >= 1:
 				advance_progression()
 
 		Enums.ProgressionStage.ESTABLISHED:
-			# Advance when production buildings exist
 			if get_building_count(Enums.BuildingType.LUMBER_MILL) >= 1 and get_building_count(Enums.BuildingType.STONE_QUARRY) >= 1:
 				advance_progression()
 
 		Enums.ProgressionStage.GROWING:
-			# Advance when territory and population grow
 			if get_population() >= 10 and _stats["territory_tiles_claimed"] >= 20:
 				advance_progression()
 
 		Enums.ProgressionStage.THRIVING:
-			# Advance when research facility exists and jade collected
 			if get_building_count(Enums.BuildingType.RESEARCH_FACILITY) >= 1 and _stats["total_jade_collected"] >= 100:
 				advance_progression()
 
@@ -576,17 +338,12 @@ func check_progression() -> void:
 
 #region Statistics
 
-## Get settlement statistics
 func get_stats() -> Dictionary:
 	return _stats.duplicate()
 
-
-## Get a specific statistic
 func get_stat(stat_name: String) -> int:
 	return _stats.get(stat_name, 0)
 
-
-## Increment a statistic
 func increment_stat(stat_name: String, amount: int = 1) -> void:
 	_stats[stat_name] = _stats.get(stat_name, 0) + amount
 
@@ -602,6 +359,8 @@ func save_state() -> Dictionary:
 		"stats": _stats.duplicate(),
 		"ai_profession_targets": _ai_profession_targets.duplicate(),
 		"claimed_tiles": _serialize_tiles(),
+		"unlocked_techs": _unlocked_techs.duplicate(),
+		"research_queue": _research_queue.duplicate(),
 	}
 
 
@@ -611,10 +370,12 @@ func load_state(state: Dictionary) -> void:
 	_resources = state.get("resources", {}).duplicate()
 	_stats = state.get("stats", {}).duplicate()
 	_ai_profession_targets = state.get("ai_profession_targets", {}).duplicate()
+	_unlocked_techs = state.get("unlocked_techs", []).duplicate()
+	_research_queue = state.get("research_queue", []).duplicate()
 	_deserialize_tiles(state.get("claimed_tiles", []))
 
-	# Ensure all resources are initialized
-	_initialize_resources()
+	# Re-init managers with loaded data
+	_init_managers()
 
 
 ## Serialize tiles to array format
@@ -633,4 +394,3 @@ func _deserialize_tiles(tiles: Array) -> void:
 		claim_tile(pos)
 
 #endregion
-
