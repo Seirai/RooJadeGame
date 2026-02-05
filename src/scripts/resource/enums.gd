@@ -86,6 +86,27 @@ enum ResearchTech {
 
 #endregion
 
+#region World Grid
+
+## Base terrain types for grid cells
+enum TerrainType {
+	VOID,       ## Out of bounds / impassable edge
+	GRASS,      ## Standard buildable ground
+	FOREST,     ## Tree cover, harvestable by Lumberjacks
+	ROCK,       ## Stone deposits, mineable
+	WATER,      ## Impassable, no building
+	JADE_VEIN,  ## Rare jade deposit
+}
+
+## Territory ownership states
+enum TileState {
+	UNKNOWN,    ## Not yet explored, hidden by fog of war
+	SCOUTED,    ## Revealed by a Scout, visible but not owned
+	CLAIMED,    ## Absorbed into settlement territory, buildable if passable
+}
+
+#endregion
+
 #region Items
 
 ## Item categories

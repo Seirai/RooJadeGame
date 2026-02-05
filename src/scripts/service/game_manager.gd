@@ -10,12 +10,14 @@ const scene_service = preload("res://src/scripts/service/scene_service.gd")
 const mob_service = preload("res://src/scripts/service/mob_service.gd")
 const camera_service = preload("res://src/scripts/service/camera_service.gd")
 const item_service = preload("res://src/scripts/service/item_service.gd")
+const world_grid_service = preload("res://src/scripts/service/world_grid.gd")
 
 var SettingsService: settings_service
 var SceneService: scene_service
 var MobService: mob_service
 var CameraService: camera_service
 var ItemService: item_service
+var WorldGridService: world_grid_service
 
 
 
@@ -41,3 +43,7 @@ func _ready() -> void:
 	# Initialize item service
 	ItemService = item_service.new()
 	add_child(ItemService)
+
+	# Initialize world grid service
+	WorldGridService = world_grid_service.new()
+	add_child(WorldGridService)

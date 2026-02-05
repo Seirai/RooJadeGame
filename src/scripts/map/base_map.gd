@@ -30,11 +30,24 @@ func _ready() -> void:
 
 ## Initialize map settings
 func _initialize_map() -> void:
+	_setup_world_grid()
 	_setup_camera_bounds()
 	_setup_physics()
 	_play_bgm()
 
 	print("Map initialized: ", map_name, " (", map_id, ")")
+
+
+## Initialize WorldGrid from the map's terrain TileMapLayer
+func _setup_world_grid() -> void:
+	if not GameManager or not GameManager.WorldGridService:
+		push_warning("WorldGrid service not available")
+		return
+	var terrain_layer = tilemaps.get_node_or_null("TileMapLayer")
+	if terrain_layer and terrain_layer is TileMapLayer:
+		GameManager.WorldGridService.load_from_tilemap(terrain_layer)
+	else:
+		push_warning("BaseMap: No TileMapLayer found under TileMaps node")
 
 
 ## Set up camera bounds

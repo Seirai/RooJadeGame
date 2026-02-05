@@ -44,8 +44,8 @@ func _ensure_type_registry_initialized() -> void:
 
 #region Public API
 
-## Register a building in the settlement
-func register(building: Node, building_type: Enums.BuildingType) -> int:
+## Register a building in the settlement at a grid cell
+func register(building: Node, building_type: Enums.BuildingType, cell_pos: Vector2i = Vector2i(-1, -1)) -> int:
 	var building_id = _next_building_id
 	_next_building_id += 1
 
@@ -54,6 +54,13 @@ func register(building: Node, building_type: Enums.BuildingType) -> int:
 
 	building.set_meta("settlement_building_id", building_id)
 	building.set_meta("building_type", building_type)
+
+	# Register on WorldGrid if a valid cell was provided
+	if cell_pos != Vector2i(-1, -1):
+		var world_grid = _get_world_grid()
+		if world_grid:
+			world_grid.set_building(cell_pos, building)
+			building.set_meta("grid_cell", cell_pos)
 
 	_stats["buildings_constructed"] = _stats.get("buildings_constructed", 0) + 1
 	building_placed.emit(building, building_type)
@@ -69,10 +76,33 @@ func unregister(building: Node) -> void:
 	if building_id < 0:
 		return
 
+	# Clear from WorldGrid
+	var cell_pos = building.get_meta("grid_cell", Vector2i(-1, -1))
+	if cell_pos != Vector2i(-1, -1):
+		var world_grid = _get_world_grid()
+		if world_grid:
+			world_grid.clear_building(cell_pos)
+
 	_buildings.erase(building_id)
 	_buildings_by_type[building_type].erase(building)
 
 	building_destroyed.emit(building, building_type)
+
+
+## Check if a cell is valid for building placement via WorldGrid
+func can_build_at(cell_pos: Vector2i) -> bool:
+	var world_grid = _get_world_grid()
+	if not world_grid:
+		return false
+	return world_grid.is_buildable(cell_pos)
+
+
+## Get the world position for a grid cell (for snapping)
+func get_build_position(cell_pos: Vector2i) -> Vector2:
+	var world_grid = _get_world_grid()
+	if world_grid:
+		return world_grid.cell_to_world(cell_pos)
+	return Vector2(cell_pos)
 
 
 ## Get all buildings of a type
@@ -133,5 +163,14 @@ func find_available(building_type: Enums.BuildingType, position: Vector2) -> Nod
 				nearest = building
 
 	return nearest
+
+#endregion
+
+#region Internal
+
+func _get_world_grid() -> WorldGrid:
+	if GameManager and GameManager.WorldGridService:
+		return GameManager.WorldGridService
+	return null
 
 #endregion

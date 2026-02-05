@@ -85,6 +85,7 @@ var _population_manager: PopulationManager
 var _profession_manager: ProfessionManager
 var _building_manager: BuildingManager
 var _research_manager: ResearchManager
+var _territory_manager: TerritoryManager
 
 #endregion
 
@@ -98,6 +99,7 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
 	_research_manager.process_research(delta)
+	_territory_manager.process_claiming(delta)
 
 
 func _create_managers() -> void:
@@ -116,11 +118,15 @@ func _create_managers() -> void:
 	_research_manager = ResearchManager.new()
 	_research_manager.name = "ResearchManager"
 
+	_territory_manager = TerritoryManager.new()
+	_territory_manager.name = "TerritoryManager"
+
 	add_child(_resource_manager)
 	add_child(_population_manager)
 	add_child(_profession_manager)
 	add_child(_building_manager)
 	add_child(_research_manager)
+	add_child(_territory_manager)
 
 
 func _init_managers() -> void:
@@ -130,6 +136,9 @@ func _init_managers() -> void:
 	_profession_manager.init(_ai_profession_targets, _population_manager)
 	_building_manager.init(_buildings, _buildings_by_type, _stats)
 	_research_manager.init(_unlocked_techs, _research_queue, _resource_manager)
+	_territory_manager.init(_claimed_tiles, _stats)
+	_territory_manager.tile_claimed.connect(_on_tile_claimed)
+	_territory_manager.tile_scouted.connect(_on_tile_scouted)
 
 #endregion
 
@@ -246,20 +255,21 @@ func get_research_progress() -> float:
 
 #endregion
 
-#region Territory Management
+#region Territory API (delegates to TerritoryManager)
 
-## Claim a tile as part of the settlement
-func claim_tile(tile_position: Vector2i) -> void:
-	if _claimed_tiles.has(tile_position):
-		return
+## Scout a tile (transition UNKNOWN -> SCOUTED)
+func scout_tile(tile_position: Vector2i, scout_roo_id: int = -1) -> void:
+	_territory_manager.scout_tile(tile_position, scout_roo_id)
 
-	_claimed_tiles[tile_position] = {
-		"claimed_at": Time.get_unix_time_from_system(),
-		"claimed_by": null,
-	}
 
-	_stats["territory_tiles_claimed"] = _stats.get("territory_tiles_claimed", 0) + 1
-	territory_claimed.emit(tile_position)
+## Attempt to claim a tile (checks adjacency, threat, delay rules)
+func try_claim_tile(tile_position: Vector2i) -> bool:
+	return _territory_manager.try_claim_tile(tile_position)
+
+
+## Get the territory state of a tile
+func get_tile_state(tile_position: Vector2i) -> Enums.TileState:
+	return _territory_manager.get_tile_state(tile_position)
 
 
 ## Check if a tile is claimed
@@ -269,10 +279,12 @@ func is_tile_claimed(tile_position: Vector2i) -> bool:
 
 ## Get all claimed tile positions
 func get_claimed_tiles() -> Array[Vector2i]:
-	var tiles: Array[Vector2i] = []
-	for pos in _claimed_tiles.keys():
-		tiles.append(pos)
-	return tiles
+	return _territory_manager.get_claimed_tiles()
+
+
+## Get frontier tiles for scout AI
+func get_frontier_tiles() -> Array[Vector2i]:
+	return _territory_manager.get_frontier_tiles()
 
 
 ## Get settlement territory bounds
@@ -292,7 +304,12 @@ func get_territory_bounds() -> Rect2i:
 	return Rect2i(min_pos, max_pos - min_pos + Vector2i.ONE)
 
 
-## Report a threat detected by scouts
+## Report a threat at a cell position
+func report_threat_at_cell(cell_pos: Vector2i, threat_level: int) -> void:
+	_territory_manager.set_threat(cell_pos, threat_level)
+
+
+## Report a threat detected by scouts (world-space)
 func report_threat(position: Vector2, threat_type: String) -> void:
 	threat_detected.emit(position, threat_type)
 
@@ -333,6 +350,17 @@ func check_progression() -> void:
 		Enums.ProgressionStage.THRIVING:
 			if get_building_count(Enums.BuildingType.RESEARCH_FACILITY) >= 1 and _stats["total_jade_collected"] >= 100:
 				advance_progression()
+
+#endregion
+
+#region Territory Callbacks
+
+func _on_tile_claimed(cell_pos: Vector2i) -> void:
+	territory_claimed.emit(cell_pos)
+
+
+func _on_tile_scouted(_cell_pos: Vector2i) -> void:
+	pass  # Hook for future UI/audio feedback
 
 #endregion
 
@@ -391,6 +419,8 @@ func _deserialize_tiles(tiles: Array) -> void:
 	_claimed_tiles.clear()
 	for tile in tiles:
 		var pos = Vector2i(tile.get("x", 0), tile.get("y", 0))
-		claim_tile(pos)
+		_claimed_tiles[pos] = {
+			"claimed_at": tile.get("claimed_at", 0.0),
+		}
 
 #endregion
