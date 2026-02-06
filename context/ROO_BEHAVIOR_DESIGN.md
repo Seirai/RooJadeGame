@@ -72,6 +72,110 @@ func set_facing(direction: int) -> void:
 
 The current `Controller` component is at `src/scenes/components/controller.gd`. This should be renamed to `PlayerController` and a new `AIController` created alongside it.
 
+### Future-Proofing: Dynamic Controller Swapping
+
+Design the controller system to support runtime addition/removal of controllers, enabling:
+
+1. **Possess any entity**: Player can take control of any Mob (Roo, enemy, NPC)
+2. **Release control**: Return entity to AI control seamlessly
+3. **Spectator mode**: Remove all controllers, entity becomes inert
+4. **Cutscenes/scripted sequences**: Temporarily override with scripted controller
+
+#### Controller Interface (Base Class)
+
+```gdscript
+class_name MobController
+extends Node
+
+var mob: Mob
+var is_active: bool = true
+
+func _ready() -> void:
+    mob = get_parent() as Mob
+    if mob:
+        _on_attached()
+
+func _on_attached() -> void:
+    pass  # Override: setup when attached to mob
+
+func _on_detached() -> void:
+    pass  # Override: cleanup when removed from mob
+
+func activate() -> void:
+    is_active = true
+
+func deactivate() -> void:
+    is_active = false
+```
+
+#### Mob Controller Management
+
+```gdscript
+# In Mob class
+var active_controller: MobController = null
+
+func set_controller(controller: MobController) -> void:
+    # Detach current controller
+    if active_controller:
+        active_controller._on_detached()
+        active_controller.deactivate()
+
+    # Attach new controller
+    active_controller = controller
+    if controller:
+        if controller.get_parent() != self:
+            add_child(controller)
+        controller._on_attached()
+        controller.activate()
+
+func remove_controller() -> void:
+    set_controller(null)
+
+func get_controller() -> MobController:
+    return active_controller
+```
+
+#### Use Cases
+
+| Scenario | Implementation |
+|----------|----------------|
+| Player possesses Roo | `roo.set_controller(PlayerController.new())` |
+| Release Roo to AI | `roo.set_controller(AIController.new())` |
+| Debug: freeze entity | `mob.remove_controller()` |
+| Cutscene control | `mob.set_controller(ScriptedController.new(cutscene_data))` |
+
+#### Camera Follows Active Possession
+
+When player possesses a new entity:
+```gdscript
+func possess(target_mob: Mob) -> void:
+    # Release current possession
+    if current_possessed:
+        current_possessed.set_controller(AIController.new())
+
+    # Take control of new target
+    current_possessed = target_mob
+    target_mob.set_controller(player_controller)
+
+    # Camera follows new target
+    GameManager.CameraService.set_follow_target(target_mob)
+```
+
+#### Signals for Controller Changes
+
+```gdscript
+# In Mob
+signal controller_changed(old_controller: MobController, new_controller: MobController)
+signal possessed_by_player()
+signal released_from_player()
+```
+
+This architecture enables gameplay features like:
+- Mind control abilities
+- Debugging by possessing any entity
+- Tutorial sequences controlling the player
+- Multiplayer where players can swap controlled units
+
 ---
 
 ## Professions Recap
@@ -152,15 +256,19 @@ Score-based decision making where each action has a utility function.
 - Requires careful tuning
 - May feel "mushy" without clear priorities
 
-### Recommendation: Behavior Tree with State Machine Leaves
+### Decision: Option B - Behavior Tree
 
-Combine BT for high-level decision making with simple state machines for action execution:
+**Chosen approach**: Pure Behavior Tree implementation.
 
-```
-BehaviorTree (decision layer)
-└── ActionNode
-    └── StateMachine (execution layer)
-```
+The BT approach provides the best balance of modularity, reusability, and maintainability for this project. Key reasons:
+
+1. **Profession subtrees** can be swapped cleanly when profession changes
+2. **Common behaviors** (MoveTo, Flee, Idle) are shared across all professions
+3. **Priority handling** is built into selector nodes - danger always takes precedence
+4. **Industry standard** - well-documented patterns and potential plugin support (e.g., Beehave)
+5. **Visual debugging** possible with BT visualization tools
+
+Action nodes will contain simple linear logic rather than nested state machines to keep complexity manageable.
 
 ---
 
