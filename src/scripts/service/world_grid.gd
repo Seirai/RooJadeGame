@@ -232,6 +232,8 @@ func load_from_tilemap(tilemap_layer: TileMapLayer) -> void:
 		push_warning("WorldGrid: TileMapLayer has no used cells")
 		return
 
+	var tileset = tilemap_layer.tile_set
+
 	# Calculate bounds from used cells
 	var min_pos = Vector2i(999999, 999999)
 	var max_pos = Vector2i(-999999, -999999)
@@ -244,9 +246,14 @@ func load_from_tilemap(tilemap_layer: TileMapLayer) -> void:
 
 		var source_id = tilemap_layer.get_cell_source_id(cell_pos)
 		var atlas_coords = tilemap_layer.get_cell_atlas_coords(cell_pos)
-		var terrain = _terrain_from_tile(source_id, atlas_coords)
+		var has_collision = _tile_has_collision(tileset, source_id, atlas_coords)
+		var terrain = _terrain_from_tile(source_id, atlas_coords, has_collision)
 
-		_cells[cell_pos] = _make_cell(terrain)
+		var cell = _make_cell(terrain)
+		# Physics collision overrides terrain-based passability
+		if has_collision:
+			cell["passable"] = false
+		_cells[cell_pos] = cell
 
 	_bounds = Rect2i(min_pos, max_pos - min_pos + Vector2i.ONE)
 	print("WorldGrid: Loaded %d cells from TileMapLayer, bounds: %s" % [_cells.size(), _bounds])
@@ -354,13 +361,46 @@ func _is_terrain_passable(terrain: Enums.TerrainType) -> bool:
 			return true
 
 
+## Check if a tile has physics collision defined in the TileSet
+func _tile_has_collision(tileset: TileSet, source_id: int, atlas_coords: Vector2i) -> bool:
+	if not tileset or tileset.get_physics_layers_count() == 0:
+		return false
+
+	var source = tileset.get_source(source_id)
+	if not source or not source is TileSetAtlasSource:
+		return false
+
+	var atlas_source = source as TileSetAtlasSource
+	if not atlas_source.has_tile(atlas_coords):
+		return false
+
+	var tile_data = atlas_source.get_tile_data(atlas_coords, 0)
+	if not tile_data:
+		return false
+
+	return tile_data.get_collision_polygons_count(0) > 0
+
+
 ## Map TileMapLayer source/atlas data to a TerrainType
-## Override or extend this for project-specific tile mappings
-func _terrain_from_tile(source_id: int, atlas_coords: Vector2i) -> Enums.TerrainType:
-	# Default mapping: all tiles are GRASS
-	# TODO: Map specific source_id/atlas_coords to terrain types
-	# based on the project's tileset configuration
-	return Enums.TerrainType.GRASS
+## Uses source_id and collision data to classify tiles:
+##   Source 0 (grass-stone-terrain): no collision = GRASS, collision = ROCK
+##   Source 1 (town1 buildings): GRASS (buildings tracked separately on grid)
+func _terrain_from_tile(source_id: int, atlas_coords: Vector2i, has_collision: bool) -> Enums.TerrainType:
+	match source_id:
+		0:
+			# grass-stone-terrain.png
+			# Tiles without collision = walkable grass ground
+			# Tiles with collision = stone cliffs/walls
+			if has_collision:
+				return Enums.TerrainType.ROCK
+			return Enums.TerrainType.GRASS
+		1:
+			# town1.png - building/structure tiles
+			# Treat as GRASS for terrain purposes; buildings are tracked
+			# as separate entities on the WorldGrid
+			return Enums.TerrainType.GRASS
+		_:
+			return Enums.TerrainType.GRASS
 
 
 ## Procedural cell generation (placeholder)
