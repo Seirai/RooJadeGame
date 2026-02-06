@@ -1,9 +1,10 @@
-[gd_scene load_steps=5 format=4 uid="uid://b5abtxrm0xy3p"]
+[gd_scene load_steps=6 format=4 uid="uid://b5abtxrm0xy3p"]
 
 [ext_resource type="Script" uid="uid://m3f80lnlh1rr" path="res://src/scripts/map/test_stage_1.gd" id="1_stage"]
 [ext_resource type="TileSet" uid="uid://isxnrbxb2w27" path="res://src/assets/tilesets/forest-kingdom/forest-kingdom.tres" id="3_1mwrg"]
 [ext_resource type="PackedScene" uid="uid://tejr4gt6j8cp" path="res://src/scenes/map/mountains_blue/mountains_blue.tscn" id="3_nudlh"]
 [ext_resource type="PackedScene" uid="uid://c61kjoplvb1qb" path="res://src/scenes/mobs/player.tscn" id="3_player"]
+[ext_resource type="PackedScene" uid="uid://3okpmjys23pi" path="res://src/scenes/mobs/roo.tscn" id="4_4e0a0"]
 
 [node name="TestStage1" type="Node2D"]
 script = ExtResource("1_stage")
@@ -33,6 +34,10 @@ gizmo_extents = 32.0
 [node name="Enemies" type="Node2D" parent="Entities"]
 
 [node name="Collectibles" type="Node2D" parent="Entities"]
+
+[node name="Roo" parent="Entities" instance=ExtResource("4_4e0a0")]
+z_index = 15
+position = Vector2(-315, 222)
 
 [node name="Camera2D" type="Camera2D" parent="."]
 limit_top = 0

@@ -1,0 +1,15 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://src/scenes/components/debug/debug_sprite.gd" id="1_debug"]
+
+[node name="DebugSprite" type="Sprite2D"]
+script = ExtResource("1_debug")
+display_name = ""
+show_labels = true
+show_name = true
+show_info = false
+label_offset = Vector2(0, -32)
+font_size = 12
+fallback_shape = 0
+fallback_size = Vector2(32, 32)
+fallback_color = Color(1, 0, 1, 1)

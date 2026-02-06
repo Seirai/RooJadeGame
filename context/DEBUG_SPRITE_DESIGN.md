@@ -369,9 +369,57 @@ func _input(event: InputEvent) -> void:
 
 ## File Location
 
+All debug components live in a dedicated directory that is excluded from release builds:
+
 ```
-src/scenes/components/debug_sprite.tscn
-src/scenes/components/debug_sprite.gd
+src/scenes/components/debug/
+├── debug_sprite.tscn
+├── debug_sprite.gd
+└── (future debug components...)
+```
+
+### Release Build Exclusion
+
+The `debug/` directory is excluded from release exports via Godot's export settings:
+
+**In `export_presets.cfg` or via Export dialog:**
+
+```ini
+[preset.0]
+export_filter="exclude"
+export_files=PoolStringArray(
+    "res://src/scenes/components/debug/*"
+)
+```
+
+**Or via `.gdignore` file:**
+
+Create `src/scenes/components/debug/.gdignore` to completely hide the folder from Godot in release builds. However, this also hides it in the editor, so the export filter method is preferred.
+
+### Feature Tag Alternative
+
+For more granular control, use Godot's feature tags:
+
+```gdscript
+# In entity scenes, conditionally load debug sprite
+func _ready() -> void:
+    if OS.has_feature("debug"):
+        var debug_sprite = preload("res://src/scenes/components/debug/debug_sprite.tscn").instantiate()
+        add_child(debug_sprite)
+```
+
+### Directory Structure
+
+```
+src/scenes/components/
+├── debug/                    # Debug-only components (excluded from release)
+│   ├── debug_sprite.tscn
+│   ├── debug_sprite.gd
+│   ├── debug_territory_overlay.tscn  # Future: territory visualization
+│   └── debug_pathfinding.tscn        # Future: pathfinding visualization
+├── health.tscn               # Production components
+├── mob.tscn
+└── ...
 ```
 
 ---
