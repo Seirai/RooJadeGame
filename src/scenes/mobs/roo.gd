@@ -1,4 +1,5 @@
 extends Mob
+class_name Roo
 ## Roo - A citizen of the settlement.
 ##
 ## Roos are the primary workforce of the settlement, performing various
@@ -11,6 +12,9 @@ signal profession_changed(new_profession: Enums.Professions)
 #endregion
 
 #region Properties
+
+## Reference to the AI brain (if present)
+var roo_brain: RooBrain = null
 
 ## Current profession assignment
 var profession: Enums.Professions = Enums.Professions.NONE:
@@ -35,6 +39,7 @@ var is_viewer_controlled: bool = false
 
 func _ready() -> void:
 	super._ready()
+	roo_brain = get_node_or_null("RooBrain") as RooBrain
 	_update_debug_name()
 	_update_debug_info()
 

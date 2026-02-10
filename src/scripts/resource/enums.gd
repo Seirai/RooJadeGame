@@ -129,3 +129,14 @@ enum Rarity {
 }
 
 #endregion
+
+#region Behavior Tree
+
+## Behavior tree node return status
+enum BTStatus {
+	SUCCESS,    ## Node completed successfully
+	FAILURE,    ## Node failed
+	RUNNING,    ## Node still executing, tick again next cycle
+}
+
+#endregion

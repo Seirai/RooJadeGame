@@ -1,5 +1,5 @@
-extends Node
-class_name ControllerComponent
+extends MobController
+class_name PlayerController
 ## Component that translates GUIDE input actions into parent entity actions.
 ##
 ## Attach this to any entity that can be controlled (Player, NPCs, vehicles).
@@ -42,7 +42,6 @@ class_name ControllerComponent
 
 #region State
 
-var _is_enabled: bool = false
 ## Action map from parent - maps action names to callables/metadata
 var _action_map: Dictionary = {}
 ## Cached callable references for performance
@@ -57,15 +56,12 @@ var _dash_action_call: Callable
 #region Lifecycle
 
 func _ready() -> void:
-	# Register with parent if it supports controller registration
-	_register_with_parent()
-
-	# Connect GUIDE action signals for trigger-type actions
+	super._ready()
 	_connect_guide_actions()
 
 
 func _physics_process(delta: float) -> void:
-	if not _is_enabled:
+	if not is_active:
 		return
 
 	# Process continuous actions (movement)
@@ -78,23 +74,35 @@ func _physics_process(delta: float) -> void:
 
 #endregion
 
+#region Controller Hooks
+
+## Called when attached to a Mob — register with parent and get action map.
+func _on_attached() -> void:
+	_register_with_parent()
+
+
+## Called when detached from a Mob — disable input.
+func _on_detached() -> void:
+	disable_control()
+
+#endregion
+
 #region Registration
 
 ## Attempts to register with parent entity
 func _register_with_parent() -> void:
-	var parent = get_parent()
-	if parent == null:
+	if mob == null:
 		return
 
-	if not parent.has_method("_register_controller"):
-		push_warning("ControllerComponent: Parent '%s' does not implement _register_controller(). Controller disabled." % parent.name)
+	if not mob.has_method("_register_controller"):
+		push_warning("PlayerController: Parent '%s' does not implement _register_controller(). Controller disabled." % mob.name)
 		return
 
 	# Call parent's registration function - it returns the action map
-	_action_map = parent._register_controller(self)
+	_action_map = mob._register_controller(self)
 
 	if _action_map.is_empty():
-		push_warning("ControllerComponent: Parent returned empty action map.")
+		push_warning("PlayerController: Parent returned empty action map.")
 		return
 
 	# Cache callable references for performance
@@ -148,17 +156,17 @@ func _connect_guide_actions() -> void:
 
 
 func _on_attack_triggered() -> void:
-	if _is_enabled and _attack_action_call.is_valid():
+	if is_active and _attack_action_call.is_valid():
 		_attack_action_call.call()
 
 
 func _on_interact_triggered() -> void:
-	if _is_enabled and _interact_action_call.is_valid():
+	if is_active and _interact_action_call.is_valid():
 		_interact_action_call.call()
 
 
 func _on_dash_triggered() -> void:
-	if _is_enabled and _dash_action_call.is_valid():
+	if is_active and _dash_action_call.is_valid():
 		_dash_action_call.call()
 
 #endregion
@@ -167,16 +175,16 @@ func _on_dash_triggered() -> void:
 
 ## Enables input processing
 func enable_control() -> void:
-	if gameplay_context and not _is_enabled:
+	if gameplay_context and not is_active:
 		GUIDE.enable_mapping_context(gameplay_context)
-		_is_enabled = true
+		is_active = true
 
 
 ## Disables input processing
 func disable_control() -> void:
-	if gameplay_context and _is_enabled:
+	if gameplay_context and is_active:
 		GUIDE.disable_mapping_context(gameplay_context)
-		_is_enabled = false
+		is_active = false
 
 
 ## Switches to dialogue context (disables gameplay)
@@ -188,13 +196,13 @@ func enable_dialogue_mode() -> void:
 
 ## Returns to gameplay from dialogue
 func disable_dialogue_mode() -> void:
-	if dialogue_context and gameplay_context and _is_enabled:
+	if dialogue_context and gameplay_context and is_active:
 		GUIDE.disable_mapping_context(dialogue_context)
 		GUIDE.enable_mapping_context(gameplay_context)
 
 
 ## Checks if this controller is currently enabled
 func is_enabled() -> bool:
-	return _is_enabled
+	return is_active
 
 #endregion

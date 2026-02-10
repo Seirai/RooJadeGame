@@ -92,6 +92,7 @@ var _territory_manager: TerritoryManager
 #region Lifecycle
 
 func _ready() -> void:
+	add_to_group("settlement")
 	_create_managers()
 	_init_managers()
 	print("Settlement system initialized")

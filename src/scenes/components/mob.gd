@@ -3,7 +3,7 @@ class_name Mob
 ## Base class for all character entities (players, NPCs, enemies).
 ##
 ## Provides movement, jumping, dashing, and action execution.
-## Can be controlled by ControllerComponent (player input) or AI.
+## Can be controlled by PlayerController (player input) or AIController (AI).
 ##
 ## Action API (for controllers and AI):
 ##   - set_move_input(direction, delta): Set horizontal movement (-1 to 1)
@@ -20,6 +20,7 @@ signal exp_gained(amount: int, new_total: int)
 signal leveled_up(new_level: int)
 signal action_executed(action_name: String)
 signal movement_state_changed(is_grounded: bool)
+signal controller_changed(old_controller: MobController, new_controller: MobController)
 
 #endregion
 
@@ -28,7 +29,7 @@ signal movement_state_changed(is_grounded: bool)
 var health_component: HealthComponent = null
 var stat_container: StatContainer = null
 var mana_component: ManaComponent = null
-var controller_component: ControllerComponent = null
+var controller_component: MobController = null
 
 #endregion
 
@@ -106,7 +107,8 @@ func _ready() -> void:
 	health_component = get_node_or_null("Health") as HealthComponent
 	stat_container = get_node_or_null("Stats") as StatContainer
 	mana_component = get_node_or_null("Mana") as ManaComponent
-	controller_component = get_node_or_null("Controller") as ControllerComponent
+	if controller_component == null:
+		controller_component = get_node_or_null("Controller") as MobController
 
 	jumps_remaining = max_jumps
 	_find_sprite_node()
@@ -164,10 +166,9 @@ func _update_timers(delta: float) -> void:
 
 #region Controller Registration
 
-## Called by ControllerComponent to get the action map.
+## Called by controllers to get the action map.
 ## Returns a dictionary mapping action names to callables.
-## AI can also use these same methods directly.
-func _register_controller(_controller: ControllerComponent) -> Dictionary:
+func _register_controller(_controller: MobController) -> Dictionary:
 	return {
 		# Continuous actions (called every frame with value + delta)
 		"move": Callable(self, "set_move_input"),
@@ -178,6 +179,38 @@ func _register_controller(_controller: ControllerComponent) -> Dictionary:
 		"interact": Callable(self, "interact"),
 		"dash": Callable(self, "dash"),
 	}
+
+#endregion
+
+#region Controller Management
+
+## Set the active controller for this mob.
+## Detaches the old controller and attaches the new one.
+func set_controller(controller: MobController) -> void:
+	var old = controller_component
+	if old:
+		old._on_detached()
+		old.deactivate()
+
+	controller_component = controller
+	if controller:
+		if controller.get_parent() != self:
+			add_child(controller)
+		controller.mob = self
+		controller._on_attached()
+		controller.activate()
+
+	controller_changed.emit(old, controller)
+
+
+## Remove the active controller (entity becomes inert).
+func remove_controller() -> void:
+	set_controller(null)
+
+
+## Get the active controller.
+func get_controller() -> MobController:
+	return controller_component
 
 #endregion
 

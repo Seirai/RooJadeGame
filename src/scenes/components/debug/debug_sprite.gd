@@ -22,11 +22,10 @@ var sprite_frames: SpriteFrames = null
 ## Internal playing state
 var _is_playing: bool = false
 
-## Signals matching AnimatedSprite2D
+## Signals matching AnimatedSprite2D (frame_changed is inherited from Sprite2D)
 signal animation_changed()
 signal animation_finished()
 signal animation_looped()
-signal frame_changed()
 
 ## Play animation - called by _update_animations() in player.gd and similar
 func play(anim_name: StringName = &"", _custom_speed: float = 1.0, _from_end: bool = false) -> void:

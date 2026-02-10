@@ -845,9 +845,267 @@ src/scripts/ai/
 2. **Behavior Tree Plugin**: Use existing addon (e.g., Beehave) or roll custom?
 3. **Roo Inventory**: How much can a Roo carry? Affects trip frequency.
 4. **Night/Day Cycle**: Do Roos rest at night? Return home?
-5. **Happiness/Morale**: Does it affect work efficiency?
+5. ~~**Happiness/Morale**: Does it affect work efficiency?~~ → See Happiness System below
 6. **Specialization**: Can Roos level up in their profession?
 7. **Player Control**: Can player directly command individual Roos?
+
+---
+
+## Happiness System (Decision)
+
+Roos have a **single happiness value** that affects their behavior and work efficiency.
+
+### Happiness Factors
+
+| Factor | Source | Effect on Happiness |
+|--------|--------|---------------------|
+| **Accommodation** | Assigned living quarters quality | Base happiness level |
+| **Amenities** | Available leisure buildings (tavern, park, etc.) | Bonus during rest |
+| **Rest Quality** | Time spent in leisure/rest mode | Restores happiness |
+
+### Accommodation Tiers
+
+```gdscript
+enum AccommodationType {
+    NONE,           # Homeless - significant happiness penalty
+    TENT,           # Basic shelter - minimal happiness
+    SHARED_QUARTERS,# Shared room - moderate happiness
+    PRIVATE_ROOM,   # Own room - good happiness
+    LUXURY_QUARTERS,# Premium housing - high happiness
+}
+```
+
+### Housing Strategy (Future: Player/Viewer Choice)
+
+> **Streaming Integration**: Allow player or Twitch viewers (via chat votes) to influence settlement housing strategy.
+
+Two opposing housing philosophies create meaningful trade-offs:
+
+| Strategy | Housing Type | Capacity | Happiness | Cost |
+|----------|--------------|----------|-----------|------|
+| **High Density** | Shared quarters, barracks | High (8-12 per building) | Lower (+5 base) | Cheap |
+| **Luxury** | Private rooms, mansions | Low (1-2 per building) | Higher (+20 base) | Expensive |
+
+#### Decision Points
+
+When to trigger housing strategy votes:
+- Settlement reaches population threshold (e.g., 10 Roos)
+- New housing district is planned
+- Resource surplus allows expansion
+- Periodic "town hall" events
+
+#### Twitch Integration Concept
+
+> **Status**: Deferred — implement later, after core behavior tree and settlement systems are in place.
+
+Multi-step voting process for viewer engagement:
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 1: Initiation (!votebuild)                                │
+│  ─────────────────────────────────                              │
+│  Viewers type !votebuild in chat                                │
+│  Need X% participation threshold to proceed                     │
+│  Timer: 30 seconds to reach threshold                           │
+│                                                                 │
+│  [Threshold reached] → Proceed to Step 2                        │
+│  [Threshold not met] → "Not enough votes! Try again later."     │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 2: Zone Selection                                         │
+│  ──────────────────────                                         │
+│  Display: Map overview with numbered build zones                │
+│  Viewers vote: !zone1, !zone2, !zone3, etc.                     │
+│  Timer: 45 seconds                                              │
+│                                                                 │
+│  Shows: Available zones, current buildings, terrain             │
+│  Camera: Pans to show each zone briefly                         │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  STEP 3: Building Selection                                     │
+│  ────────────────────────                                       │
+│  Display: Available buildings for selected zone                 │
+│  Viewers vote: !barracks, !tavern, !lumbermill, etc.            │
+│  Timer: 45 seconds                                              │
+│                                                                 │
+│  Shows: Building cost, benefits, requirements                   │
+│  Filters: Only buildings affordable & valid for zone            │
+└─────────────────────────────────────────────────────────────────┘
+                              ↓
+┌─────────────────────────────────────────────────────────────────┐
+│  RESULT: Construction Queued                                    │
+│  ───────────────────────────                                    │
+│  "Chat voted to build [TAVERN] in [ZONE 3]!"                    │
+│  Builder Roos assigned to task                                  │
+│  Camera follows construction                                    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+```gdscript
+enum VoteBuildPhase { INACTIVE, INITIATION, ZONE_SELECT, BUILDING_SELECT }
+
+var vote_phase: VoteBuildPhase = VoteBuildPhase.INACTIVE
+var initiation_votes: int = 0
+var participation_threshold: float = 0.15  # 15% of active viewers
+
+func _on_chat_command(user: String, command: String) -> void:
+    match vote_phase:
+        VoteBuildPhase.INACTIVE:
+            if command == "!votebuild":
+                _register_initiation_vote(user)
+
+        VoteBuildPhase.ZONE_SELECT:
+            if command.begins_with("!zone"):
+                var zone_id = command.substr(5).to_int()
+                _register_zone_vote(user, zone_id)
+
+        VoteBuildPhase.BUILDING_SELECT:
+            if command.begins_with("!"):
+                var building_name = command.substr(1)
+                _register_building_vote(user, building_name)
+
+
+func _register_initiation_vote(user: String) -> void:
+    if not _has_voted_initiation(user):
+        initiation_votes += 1
+        _check_initiation_threshold()
+
+
+func _check_initiation_threshold() -> void:
+    var active_viewers = TwitchService.get_active_viewer_count()
+    var required = int(active_viewers * participation_threshold)
+
+    if initiation_votes >= required:
+        _start_zone_selection()
+
+
+func _start_zone_selection() -> void:
+    vote_phase = VoteBuildPhase.ZONE_SELECT
+    var zones = settlement.get_available_build_zones()
+
+    # Show map overview UI
+    UI.show_build_zone_overlay(zones)
+    CameraService.start_zone_tour(zones)
+
+    announcement("🗳️ ZONE VOTE: Type !zone1, !zone2, etc. to vote! (45s)")
+    _start_vote_timer(45.0, _on_zone_vote_complete)
+
+
+func _on_zone_vote_complete() -> void:
+    var winning_zone = _get_winning_zone()
+    vote_phase = VoteBuildPhase.BUILDING_SELECT
+
+    # Show building options for selected zone
+    var buildings = settlement.get_buildable_buildings(winning_zone)
+    UI.show_building_options(buildings)
+
+    announcement("🏗️ BUILDING VOTE for Zone %d: Type !tavern, !barracks, etc. (45s)" % winning_zone.id)
+    _start_vote_timer(45.0, _on_building_vote_complete)
+
+
+func _on_building_vote_complete() -> void:
+    var winning_building = _get_winning_building()
+    var zone = _get_selected_zone()
+
+    # Queue construction
+    settlement.queue_construction(winning_building, zone)
+    announcement("🎉 Chat voted to build %s in Zone %d!" % [winning_building.name, zone.id])
+
+    vote_phase = VoteBuildPhase.INACTIVE
+    UI.hide_vote_overlays()
+```
+
+#### Gameplay Implications
+
+| Aspect | High Density | Luxury |
+|--------|--------------|--------|
+| Population cap | Higher | Lower |
+| Work efficiency | Lower (unhappy) | Higher (happy) |
+| Resource drain | Lower upkeep | Higher upkeep |
+| Expansion speed | Faster | Slower |
+| Roo retention | Risk of leaving | Loyal workforce |
+
+This creates emergent strategies:
+- **Rush strategy**: High density early for workforce, upgrade later
+- **Quality strategy**: Luxury from start for efficiency bonus
+- **Hybrid**: Mixed housing tiers for different Roo "classes"
+
+### Amenities
+
+Buildings that Roos can visit during leisure time:
+
+| Amenity | Happiness Bonus | Capacity |
+|---------|-----------------|----------|
+| Campfire | +5 | 6 Roos |
+| Tavern | +10 | 10 Roos |
+| Garden/Park | +8 | 15 Roos |
+| Bath House | +12 | 8 Roos |
+| Temple | +15 | 20 Roos |
+
+### Leisure/Rest Behavior
+
+When a Roo enters rest mode (night cycle, work fatigue, or scheduled break):
+
+```
+Selector [Rest Behavior]
+├── Sequence [Use Amenity]
+│   ├── Condition: AmenityAvailable
+│   ├── Action: FindBestAmenity
+│   ├── Action: MoveTo
+│   └── Action: UseAmenity (duration, happiness gain)
+├── Sequence [Return Home]
+│   ├── Condition: HasAccommodation
+│   ├── Action: MoveToHome
+│   └── Action: Rest
+└── Action: IdleInSettlement
+```
+
+### Happiness Effects
+
+| Happiness Level | Work Efficiency | Special Effects |
+|-----------------|-----------------|-----------------|
+| 0-20 (Miserable) | 50% | May leave settlement |
+| 21-40 (Unhappy) | 75% | Slower movement |
+| 41-60 (Content) | 100% | Normal behavior |
+| 61-80 (Happy) | 110% | Faster work |
+| 81-100 (Joyful) | 125% | Bonus resource yield |
+
+### Integration
+
+```gdscript
+# In Roo class
+var happiness: float = 50.0  # 0-100 scale
+var accommodation: Node = null  # Assigned living quarters
+var current_amenity: Node = null  # Currently using
+
+func get_work_efficiency() -> float:
+    if happiness <= 20:
+        return 0.5
+    elif happiness <= 40:
+        return 0.75
+    elif happiness <= 60:
+        return 1.0
+    elif happiness <= 80:
+        return 1.1
+    else:
+        return 1.25
+
+func update_happiness(delta: float) -> void:
+    # Base decay over time
+    happiness -= HAPPINESS_DECAY_RATE * delta
+
+    # Accommodation bonus
+    if accommodation:
+        happiness += accommodation.happiness_bonus * delta
+
+    # Amenity bonus (when using)
+    if current_amenity:
+        happiness += current_amenity.happiness_rate * delta
+
+    happiness = clampf(happiness, 0.0, 100.0)
+```
 
 ---
 
