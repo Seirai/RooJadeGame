@@ -2,9 +2,9 @@
 
 [ext_resource type="PackedScene" uid="uid://c4j2uiiapurga" path="res://src/scenes/components/mob.tscn" id="1_wkyy4"]
 [ext_resource type="Script" uid="uid://7b4acyw5e446" path="res://src/scenes/mobs/roo.gd" id="2_roo"]
-[ext_resource type="PackedScene" path="res://src/scenes/components/debug/debug_sprite.tscn" id="3_debug"]
 [ext_resource type="Texture2D" uid="uid://5mvq3weygigm" path="res://icon.svg" id="4_t1fh5"]
-[ext_resource type="Script" path="res://src/scripts/ai/roo_brain.gd" id="5_brain"]
+[ext_resource type="PackedScene" path="res://src/scenes/components/debug/debug_overlay.tscn" id="5_overlay"]
+[ext_resource type="Script" path="res://src/scripts/ai/roo_brain.gd" id="6_brain"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_rggbi"]
 size = Vector2(32, 32)
@@ -12,15 +12,16 @@ size = Vector2(32, 32)
 [node name="Roo" instance=ExtResource("1_wkyy4")]
 script = ExtResource("2_roo")
 
-[node name="DebugSprite" parent="." index="3" instance=ExtResource("3_debug")]
+[node name="Sprite2D" type="Sprite2D" parent="." index="3"]
 scale = Vector2(0.25, 0.25)
 texture = ExtResource("4_t1fh5")
+
+[node name="DebugOverlay" parent="." index="4" instance=ExtResource("5_overlay")]
 display_name = "Roo"
 show_info = true
-fallback_color = Color(0.4, 0.8, 0.4, 1)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="4"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="5"]
 shape = SubResource("RectangleShape2D_rggbi")
 
-[node name="RooBrain" type="Node" parent="." index="5"]
-script = ExtResource("5_brain")
+[node name="RooBrain" type="Node" parent="." index="6"]
+script = ExtResource("6_brain")

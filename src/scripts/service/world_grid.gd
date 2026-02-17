@@ -28,6 +28,7 @@ const CELL_DEFAULTS: Dictionary = {
 	"scouted_at": 0.0,
 	"claimed_at": 0.0,
 	"scouted_by": -1,
+	"resource_node": -1,
 }
 
 #endregion
@@ -220,6 +221,33 @@ func set_claimed_at(cell_pos: Vector2i) -> void:
 
 #endregion
 
+#region Resource Node API
+
+## Set a resource node type on a cell
+func set_resource_node(cell_pos: Vector2i, node_type: Enums.ResourceNodeType) -> void:
+	if not _cells.has(cell_pos):
+		return
+	_cells[cell_pos]["resource_node"] = node_type
+	cell_changed.emit(cell_pos)
+
+
+## Get the resource node type on a cell (-1 if none)
+func get_resource_node(cell_pos: Vector2i) -> int:
+	var cell = _cells.get(cell_pos, {})
+	return cell.get("resource_node", -1)
+
+
+## Find all cells with resource nodes (optionally filtered by type)
+func get_resource_node_cells(filter_type: int = -1) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for pos in _cells.keys():
+		var rn = _cells[pos].get("resource_node", -1)
+		if rn >= 0 and (filter_type < 0 or rn == filter_type):
+			result.append(pos)
+	return result
+
+#endregion
+
 #region Generation
 
 ## Load grid data from an existing TileMapLayer scene
@@ -293,6 +321,7 @@ func serialize() -> Dictionary:
 			"threat_level": cell.get("threat_level", 0),
 			"scouted_at": cell.get("scouted_at", 0.0),
 			"claimed_at": cell.get("claimed_at", 0.0),
+			"resource_node": cell.get("resource_node", -1),
 		})
 	return {
 		"bounds": {"x": _bounds.position.x, "y": _bounds.position.y,
@@ -318,6 +347,7 @@ func deserialize(data: Dictionary) -> void:
 		cell["threat_level"] = cell_data.get("threat_level", 0)
 		cell["scouted_at"] = cell_data.get("scouted_at", 0.0)
 		cell["claimed_at"] = cell_data.get("claimed_at", 0.0)
+		cell["resource_node"] = cell_data.get("resource_node", -1)
 		_cells[pos] = cell
 
 	print("WorldGrid: Deserialized %d cells" % _cells.size())

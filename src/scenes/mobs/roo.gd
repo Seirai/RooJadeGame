@@ -45,19 +45,19 @@ func _ready() -> void:
 
 
 func _update_debug_name() -> void:
-	if sprite_node and sprite_node is DebugSprite:
+	if debug_overlay:
 		var name_str = "Roo"
 		if roo_id >= 0:
 			name_str = "Roo #%d" % roo_id
 		if is_viewer_controlled:
 			name_str += " [P]"
-		sprite_node.set_display_name(name_str)
+		debug_overlay.set_display_name(name_str)
 
 
 func _update_debug_info() -> void:
-	if sprite_node and sprite_node is DebugSprite:
+	if debug_overlay:
 		var prof_name = Enums.Professions.keys()[profession]
-		sprite_node.set_info(prof_name)
+		debug_overlay.set_info(prof_name)
 
 #endregion
 

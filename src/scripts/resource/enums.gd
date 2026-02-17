@@ -140,3 +140,14 @@ enum BTStatus {
 }
 
 #endregion
+
+#region Resource Nodes
+
+## Types of harvestable resource nodes in the world
+enum ResourceNodeType {
+	GROVE,          ## Trees — produces Wood
+	ORE_OUTCROP,    ## Rock formation — produces Stone
+	JADE_DEPOSIT,   ## Rare jade crystal — produces Jade
+}
+
+#endregion

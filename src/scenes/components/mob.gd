@@ -97,6 +97,7 @@ var dash_cooldown_timer: float = 0.0
 var is_jumping: bool = false
 var jump_hold_timer: float = 0.0
 var sprite_node: Node = null
+var debug_overlay: DebugOverlay = null
 
 #endregion
 
@@ -112,6 +113,7 @@ func _ready() -> void:
 
 	jumps_remaining = max_jumps
 	_find_sprite_node()
+	debug_overlay = get_node_or_null("DebugOverlay") as DebugOverlay
 
 	# Connect health signals
 	if health_component:
@@ -195,7 +197,7 @@ func set_controller(controller: MobController) -> void:
 	controller_component = controller
 	if controller:
 		if controller.get_parent() != self:
-			add_child(controller)
+			add_child.call_deferred(controller)
 		controller.mob = self
 		controller._on_attached()
 		controller.activate()

@@ -167,12 +167,10 @@ func _resolve_deferred_references() -> void:
 #region Debug Display
 
 func _update_debug_display() -> void:
-	if roo == null or roo.sprite_node == null:
-		return
-	if not roo.sprite_node is DebugSprite:
+	if roo == null or roo.debug_overlay == null:
 		return
 
 	var prof_name = Enums.Professions.keys()[roo.profession]
-	roo.sprite_node.set_info("%s: %s" % [prof_name, _current_state_name])
+	roo.debug_overlay.set_info("%s: %s" % [prof_name, _current_state_name])
 
 #endregion
