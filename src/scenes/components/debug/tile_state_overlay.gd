@@ -37,6 +37,7 @@ func _ready() -> void:
 	z_index = 50
 	z_as_relative = false
 	add_to_group("debug_overlay")
+	add_to_group("tile_overlay")
 
 	_wg = GameManager.WorldGridService
 	if not _wg:

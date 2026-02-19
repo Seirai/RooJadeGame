@@ -78,7 +78,7 @@ func _register_all_commands() -> void:
 	register("settlement", _cmd_settlement, "Settlement inspection.",                               "settlement resources | roos | stage | add <item> <amount>")
 	register("world",      _cmd_world,      "World grid queries.",                                  "world cell <x> <y> | world pos <x> <y>")
 	register("scene",      _cmd_scene,      "Scene control.",                                       "scene reload")
-	register("debug",      _cmd_debug,      "Debug tools.",                                         "debug overlays on|off")
+	register("debug",      _cmd_debug,      "Debug tools.",                                         "debug overlays on|off | debug tiles on|off")
 
 #endregion
 
@@ -397,11 +397,18 @@ func _cmd_scene(args: Array) -> void:
 #region Commands — Debug Tools
 
 func _cmd_debug(args: Array) -> void:
-	if args.size() < 2 or (args[0] as String).to_lower() != "overlays":
+	if args.size() < 2:
 		_err("Usage: " + _commands["debug"]["usage"])
 		return
+	var sub := (args[0] as String).to_lower()
 	var enabled := (args[1] as String).to_lower() == "on"
-	_toggle_overlays(enabled)
+	match sub:
+		"overlays":
+			_toggle_overlays(enabled)
+		"tiles":
+			_toggle_tile_overlay(enabled)
+		_:
+			_err("Unknown debug subcommand '%s'" % args[0])
 
 
 func _toggle_overlays(enabled: bool) -> void:
@@ -412,5 +419,16 @@ func _toggle_overlays(enabled: bool) -> void:
 			overlay.set_labels_visible(enabled)
 			count += 1
 	_ok("Set %d debug overlays %s." % [count, "on" if enabled else "off"])
+
+
+func _toggle_tile_overlay(enabled: bool) -> void:
+	var overlays := get_tree().get_nodes_in_group("tile_overlay")
+	if overlays.is_empty():
+		_warn("No tile overlay found in scene.")
+		return
+	for overlay: Node in overlays:
+		if overlay.has_method("set_labels_visible"):
+			overlay.set_labels_visible(enabled)
+	_ok("Tile state overlay %s." % ("on" if enabled else "off"))
 
 #endregion
