@@ -20,15 +20,17 @@ func _execute(_delta: float) -> Enums.BTStatus:
 	if frontiers.is_empty():
 		return Enums.BTStatus.FAILURE
 
-	# Find the closest passable frontier tile.
-	# Non-passable cells (rock walls) are excluded: the Roo can't enter them
-	# and claim_tile_immediate rejects them, so targeting them causes a stuck state.
+	# Find the closest passable, unreserved frontier tile.
+	# Non-passable cells (rock walls) are excluded: the Roo can't enter them.
+	# Reserved cells are excluded: another scout is already claiming them.
 	var roo_pos: Vector2 = roo.global_position
 	var best_cell: Vector2i = Vector2i(-999999, -999999)
 	var best_dist: float = INF
 
 	for cell in frontiers:
 		if not world_grid.is_passable(cell):
+			continue
+		if world_grid.is_scout_reserved(cell):
 			continue
 		var cell_world: Vector2 = world_grid.cell_to_world(cell)
 		var dist = roo_pos.distance_squared_to(cell_world)

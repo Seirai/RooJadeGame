@@ -47,6 +47,10 @@ var _tilemap_layer: TileMapLayer = null
 ## World seed used for procedural generation
 var _world_seed: int = 0
 
+## Scout reservations: cells currently being claimed by a Roo (cell -> roo_id).
+## Prevents two scouts from targeting the same frontier tile simultaneously.
+var _scout_reservations: Dictionary = {}
+
 #endregion
 
 #region Coordinate API
@@ -256,12 +260,31 @@ func get_resource_node_cells(filter_type: int = -1) -> Array[Vector2i]:
 
 #endregion
 
+#region Scout Reservation API
+
+## Reserve a cell so no other scout will target it.
+func reserve_scout_target(cell: Vector2i, roo_id: int = -1) -> void:
+	_scout_reservations[cell] = roo_id
+
+
+## Release a scout reservation (call when dwell ends or is aborted).
+func release_scout_target(cell: Vector2i) -> void:
+	_scout_reservations.erase(cell)
+
+
+## Returns true if another scout has already reserved this cell.
+func is_scout_reserved(cell: Vector2i) -> bool:
+	return _scout_reservations.has(cell)
+
+#endregion
+
 #region Generation
 
 ## Load grid data from an existing TileMapLayer scene
 func load_from_tilemap(tilemap_layer: TileMapLayer) -> void:
 	_tilemap_layer = tilemap_layer
 	_cells.clear()
+	_scout_reservations.clear()
 
 	var used_cells = tilemap_layer.get_used_cells()
 	if used_cells.is_empty():

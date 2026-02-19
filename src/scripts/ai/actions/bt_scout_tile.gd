@@ -21,11 +21,22 @@ const CLAIM_DURATION: float = 120.0
 
 var _timer: float = 0.0
 var _scouted: bool = false
+## The cell currently reserved in WorldGrid so other scouts skip it.
+var _reserved_cell: Vector2i = Vector2i.MIN
 
 
 func _on_start() -> void:
 	_timer = 0.0
 	_scouted = false
+	# Reserve the target cell immediately so no other scout picks the same tile.
+	var cell = blackboard.get_value("scout_target_cell")
+	var world_grid: WorldGrid = blackboard.get_value("world_grid")
+	var roo = blackboard.get_value("roo")
+	if cell is Vector2i and world_grid:
+		_reserved_cell = cell
+		world_grid.reserve_scout_target(cell, roo.roo_id if roo else -1)
+	else:
+		_reserved_cell = Vector2i.MIN
 
 
 func _execute(delta: float) -> Enums.BTStatus:
@@ -57,6 +68,13 @@ func _on_end(_status: Enums.BTStatus) -> void:
 	_timer = 0.0
 	_scouted = false
 	blackboard.erase_key("activity_state")
+	# Release the reservation so the cell becomes available again if the dwell
+	# was aborted, or to keep reservations tidy on success.
+	if _reserved_cell != Vector2i.MIN:
+		var world_grid: WorldGrid = blackboard.get_value("world_grid")
+		if world_grid:
+			world_grid.release_scout_target(_reserved_cell)
+		_reserved_cell = Vector2i.MIN
 
 
 ## Returns the effective dwell duration for this Roo.
