@@ -117,6 +117,17 @@ func process_claiming(delta: float) -> void:
 		if _can_claim(cell_pos):
 			_claim_tile(cell_pos)
 
+## Immediately claim a tile, bypassing the scout delay.
+## Used for bootstrapping starting territory.
+func claim_tile_immediate(cell_pos: Vector2i) -> void:
+	if not _world_grid or not _world_grid.has_cell(cell_pos):
+		return
+	if not _world_grid.is_passable(cell_pos):
+		return
+	if _world_grid.get_territory_state(cell_pos) == Enums.TileState.CLAIMED:
+		return
+	_claim_tile(cell_pos)
+
 #endregion
 
 #region Internal

@@ -76,6 +76,7 @@ const OUTLINE_SIZE: int = 3
 func _ready() -> void:
 	z_index = 100
 	z_as_relative = false
+	add_to_group("debug_overlay")
 	queue_redraw()
 
 

@@ -1,4 +1,4 @@
-[gd_scene load_steps=7 format=4 uid="uid://b5abtxrm0xy3p"]
+[gd_scene load_steps=8 format=4 uid="uid://b5abtxrm0xy3p"]
 
 [ext_resource type="Script" uid="uid://m3f80lnlh1rr" path="res://src/scripts/map/test_stage_1.gd" id="1_stage"]
 [ext_resource type="TileSet" uid="uid://isxnrbxb2w27" path="res://src/assets/tilesets/forest-kingdom/forest-kingdom.tres" id="3_1mwrg"]
@@ -6,10 +6,13 @@
 [ext_resource type="PackedScene" uid="uid://c61kjoplvb1qb" path="res://src/scenes/mobs/player.tscn" id="3_player"]
 [ext_resource type="PackedScene" uid="uid://3okpmjys23pi" path="res://src/scenes/mobs/roo.tscn" id="4_4e0a0"]
 [ext_resource type="PackedScene" path="res://src/scenes/world/resource_node.tscn" id="5_resnode"]
+[ext_resource type="PackedScene" path="res://src/scenes/systems/settlement.tscn" id="6_settl"]
 
 [node name="TestStage1" type="Node2D"]
 script = ExtResource("1_stage")
 player_scene = ExtResource("3_player")
+roo_scene = ExtResource("4_4e0a0")
+settlement_scene = ExtResource("6_settl")
 map_id = "test_stage_1"
 map_name = "Test Stage 1"
 camera_bounds = Rect2(0, -500, 2000, 1000)
@@ -35,10 +38,6 @@ gizmo_extents = 32.0
 [node name="Enemies" type="Node2D" parent="Entities"]
 
 [node name="Collectibles" type="Node2D" parent="Entities"]
-
-[node name="Roo" parent="Entities" instance=ExtResource("4_4e0a0")]
-z_index = 15
-position = Vector2(-315, 222)
 
 [node name="Grove1" parent="Entities" instance=ExtResource("5_resnode")]
 position = Vector2(150, 200)

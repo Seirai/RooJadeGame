@@ -36,6 +36,13 @@ enabled=PackedStringArray("res://addons/guide/plugin.cfg")
 
 Persist="Objects that will be saved when save game needs to occur"
 
+[layer_names]
+
+2d_physics/layer_1="Terrain"
+2d_physics/layer_2="PlayerTeam"
+2d_physics/layer_3="EnemyTeam"
+2d_physics/layer_4="Interaction"
+
 [rendering]
 
 renderer/rendering_method="gl_compatibility"

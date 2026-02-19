@@ -47,3 +47,20 @@ func _ready() -> void:
 	# Initialize world grid service
 	WorldGridService = world_grid_service.new()
 	add_child(WorldGridService)
+
+	_maybe_init_dev_console()
+
+
+## Instantiate the dev console in debug builds only.
+## Uses load() so no static reference to the scene survives a production export.
+## Strip from builds via Export > Resources > Filters to Exclude:
+##   src/scenes/components/debug/*
+func _maybe_init_dev_console() -> void:
+	const PATH = "res://src/scenes/components/debug/dev_console.tscn"
+	if not OS.is_debug_build():
+		return
+	if not ResourceLoader.exists(PATH):
+		return
+	var scene := load(PATH) as PackedScene
+	if scene:
+		add_child(scene.instantiate())

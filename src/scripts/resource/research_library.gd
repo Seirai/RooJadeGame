@@ -115,7 +115,7 @@ static func _create_advanced_tools() -> ResearchDef:
 		ItemsLibrary.Items.JADE: 10,
 	}
 	t.required_stage = Enums.ProgressionStage.ESTABLISHED
-	t.prerequisites = []
+	t.prerequisites = [] as Array[Enums.ResearchTech]
 	t.duration = 60.0
 	return t
 
@@ -130,7 +130,7 @@ static func _create_jade_refining() -> ResearchDef:
 		ItemsLibrary.Items.JADE: 25,
 	}
 	t.required_stage = Enums.ProgressionStage.GROWING
-	t.prerequisites = [Enums.ResearchTech.ADVANCED_TOOLS]
+	t.prerequisites = [Enums.ResearchTech.ADVANCED_TOOLS] as Array[Enums.ResearchTech]
 	t.duration = 90.0
 	return t
 
@@ -146,7 +146,7 @@ static func _create_fortifications() -> ResearchDef:
 		ItemsLibrary.Items.JADE: 15,
 	}
 	t.required_stage = Enums.ProgressionStage.ESTABLISHED
-	t.prerequisites = []
+	t.prerequisites = [] as Array[Enums.ResearchTech]
 	t.duration = 75.0
 	return t
 
@@ -161,7 +161,7 @@ static func _create_advanced_medicine() -> ResearchDef:
 		ItemsLibrary.Items.JADE: 30,
 	}
 	t.required_stage = Enums.ProgressionStage.GROWING
-	t.prerequisites = [Enums.ResearchTech.ADVANCED_TOOLS]
+	t.prerequisites = [Enums.ResearchTech.ADVANCED_TOOLS] as Array[Enums.ResearchTech]
 	t.duration = 120.0
 	return t
 
@@ -177,6 +177,6 @@ static func _create_exploration_gear() -> ResearchDef:
 		ItemsLibrary.Items.JADE: 10,
 	}
 	t.required_stage = Enums.ProgressionStage.ESTABLISHED
-	t.prerequisites = []
+	t.prerequisites = [] as Array[Enums.ResearchTech]
 	t.duration = 45.0
 	return t

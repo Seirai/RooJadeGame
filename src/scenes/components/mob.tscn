@@ -6,6 +6,8 @@
 [ext_resource type="PackedScene" uid="uid://bn7w2h3vq5kqm" path="res://src/scenes/components/mana_component.tscn" id="4_mana"]
 
 [node name="Mob" type="CharacterBody2D" groups=["Persist"]]
+collision_layer = 2
+collision_mask = 5
 script = ExtResource("1_fnf23")
 
 [node name="Health" parent="." instance=ExtResource("2_r8jj5")]

@@ -15,6 +15,10 @@ class_name BaseMap
 @export_group("Map Settings")
 @export var camera_bounds: Rect2 = Rect2(0, 0, 1920, 1080)
 @export var gravity_multiplier: float = 1.0
+@export var settlement_scene: PackedScene
+
+## Player settlement (set during initialization, null for maps without one)
+var player_settlement: Settlement = null
 
 ## Node references
 @onready var tilemaps: Node2D = $TileMaps
@@ -34,6 +38,7 @@ func _initialize_map() -> void:
 	_setup_camera_bounds()
 	_setup_physics()
 	_play_bgm()
+	_spawn_settlement()
 
 	print("Map initialized: ", map_name, " (", map_id, ")")
 
@@ -83,6 +88,21 @@ func _play_bgm() -> void:
 	if not bgm_path.is_empty():
 		# TODO: Integrate with AudioService when available
 		print("BGM: ", bgm_path, " (AudioService integration pending)")
+
+
+## Instantiate and initialize the player settlement.
+## Override in subclasses to customize or suppress (for maps without a settlement).
+func _spawn_settlement() -> void:
+	if not settlement_scene:
+		return
+	var settlement = settlement_scene.instantiate() as Settlement
+	if not settlement:
+		push_error("BaseMap: settlement_scene is not a Settlement")
+		return
+	add_child(settlement)
+	player_settlement = settlement
+	var origin = get_spawn_point(default_spawn)
+	settlement.initialize(origin)
 
 
 ## Spawn entities at marked positions

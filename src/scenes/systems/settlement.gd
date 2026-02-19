@@ -27,6 +27,12 @@ signal progression_stage_changed(old_stage: Enums.ProgressionStage, new_stage: E
 
 #region State (Settlement owns all data)
 
+## World-space origin of this settlement (where it was founded)
+var origin: Vector2 = Vector2.ZERO
+
+## Unique identifier for multi-settlement support
+var settlement_id: String = "player"
+
 ## Current progression stage
 var progression_stage: Enums.ProgressionStage = Enums.ProgressionStage.FOUNDING
 
@@ -98,6 +104,13 @@ func _ready() -> void:
 	print("Settlement system initialized")
 
 
+## Initialize the settlement at the given world position.
+## Call AFTER add_child() so managers exist.
+func initialize(origin_position: Vector2, territory_radius: int = 3) -> void:
+	origin = origin_position
+	_claim_starting_tiles(origin_position, territory_radius)
+
+
 func _process(delta: float) -> void:
 	_research_manager.process_research(delta)
 	_territory_manager.process_claiming(delta)
@@ -140,6 +153,22 @@ func _init_managers() -> void:
 	_territory_manager.init(_claimed_tiles, _stats)
 	_territory_manager.tile_claimed.connect(_on_tile_claimed)
 	_territory_manager.tile_scouted.connect(_on_tile_scouted)
+
+
+## Claim a patch of starting territory around a world position.
+func _claim_starting_tiles(origin_position: Vector2, radius: int) -> void:
+	var world_grid = GameManager.WorldGridService if GameManager else null
+	if not world_grid:
+		push_warning("Settlement: WorldGridService not available for starting territory")
+		return
+	var center = world_grid.world_to_cell(origin_position)
+	for x in range(-radius, radius + 1):
+		for y in range(-radius, radius + 1):
+			var cell = center + Vector2i(x, y)
+			if not world_grid.has_cell(cell) or not world_grid.is_passable(cell):
+				continue
+			_territory_manager.claim_tile_immediate(cell)
+	print("Settlement: Claimed %d starting tiles around %s" % [_claimed_tiles.size(), center])
 
 #endregion
 

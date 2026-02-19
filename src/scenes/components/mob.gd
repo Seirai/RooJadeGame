@@ -417,6 +417,21 @@ func get_dash_cooldown_remaining() -> float:
 
 #endregion
 
+#region Collision
+
+## Set collision layers based on team affiliation.
+## PlayerTeam entities pass through each other but collide with EnemyTeam, and vice versa.
+func set_collision_team(team: Enums.Team) -> void:
+	match team:
+		Enums.Team.PLAYER:
+			collision_layer = 2  # PlayerTeam
+			collision_mask = 5   # Terrain + EnemyTeam
+		Enums.Team.ENEMY:
+			collision_layer = 4  # EnemyTeam
+			collision_mask = 3   # Terrain + PlayerTeam
+
+#endregion
+
 #region Internal
 
 func _find_sprite_node() -> void:
