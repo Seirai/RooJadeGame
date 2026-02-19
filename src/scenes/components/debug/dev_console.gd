@@ -78,7 +78,7 @@ func _register_all_commands() -> void:
 	register("settlement", _cmd_settlement, "Settlement inspection.",                               "settlement resources | roos | stage | add <item> <amount>")
 	register("world",      _cmd_world,      "World grid queries.",                                  "world cell <x> <y> | world pos <x> <y>")
 	register("scene",      _cmd_scene,      "Scene control.",                                       "scene reload")
-	register("debug",      _cmd_debug,      "Debug tools.",                                         "debug overlays on|off | debug tiles on|off")
+	register("debug",      _cmd_debug,      "Debug tools.",                                         "debug overlays on|off | debug tiles on|off | debug speed <multiplier>")
 
 #endregion
 
@@ -407,6 +407,8 @@ func _cmd_debug(args: Array) -> void:
 			_toggle_overlays(enabled)
 		"tiles":
 			_toggle_tile_overlay(enabled)
+		"speed":
+			_debug_set_speed((args[1] as String).to_float())
 		_:
 			_err("Unknown debug subcommand '%s'" % args[0])
 
@@ -430,5 +432,13 @@ func _toggle_tile_overlay(enabled: bool) -> void:
 		if overlay.has_method("set_labels_visible"):
 			overlay.set_labels_visible(enabled)
 	_ok("Tile state overlay %s." % ("on" if enabled else "off"))
+
+
+func _debug_set_speed(multiplier: float) -> void:
+	if multiplier <= 0.0:
+		_err("Speed multiplier must be > 0.")
+		return
+	GameManager.debug_speed = multiplier
+	_ok("Debug speed: %.1fx  (claim ~%.1fs per tile)" % [multiplier, 120.0 / multiplier])
 
 #endregion

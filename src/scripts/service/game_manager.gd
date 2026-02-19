@@ -19,6 +19,10 @@ var CameraService: camera_service
 var ItemService: item_service
 var WorldGridService: world_grid_service
 
+## Multiplier applied to all time-based gameplay durations (scouting, building, etc.).
+## 1.0 = real-game speed. Increased by the DevConsole in debug builds.
+var debug_speed: float = 1.0
+
 
 
 func _ready() -> void:
@@ -64,3 +68,5 @@ func _maybe_init_dev_console() -> void:
 	var scene := load(PATH) as PackedScene
 	if scene:
 		add_child(scene.instantiate())
+	# Start debug builds at 60× speed so timed actions complete in seconds.
+	debug_speed = 60.0

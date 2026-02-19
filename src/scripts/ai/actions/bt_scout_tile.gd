@@ -15,8 +15,9 @@ extends BTAction
 ## Requires blackboard keys: "settlement" (Settlement), "roo" (Roo),
 ##                           "scout_target_cell" (Vector2i).
 
-## Base seconds a scout must dwell to claim a tile.
-const CLAIM_DURATION: float = 5.0
+## Base seconds a scout must dwell to claim a tile at real-game speed.
+## Divided by GameManager.debug_speed at runtime (default 60× in debug builds).
+const CLAIM_DURATION: float = 120.0
 
 var _timer: float = 0.0
 var _scouted: bool = false
@@ -59,6 +60,8 @@ func _on_end(_status: Enums.BTStatus) -> void:
 
 
 ## Returns the effective dwell duration for this Roo.
+## Divides by GameManager.debug_speed so the DevConsole can accelerate time.
 ## Override or extend to apply research/progression/experience modifiers.
 func _get_claim_duration() -> float:
-	return CLAIM_DURATION
+	var speed := GameManager.debug_speed if GameManager else 1.0
+	return CLAIM_DURATION / maxf(speed, 0.01)
