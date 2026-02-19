@@ -39,6 +39,7 @@ func _initialize_map() -> void:
 	_setup_physics()
 	_play_bgm()
 	_spawn_settlement()
+	_maybe_init_tile_overlay()
 
 	print("Map initialized: ", map_name, " (", map_id, ")")
 
@@ -103,6 +104,19 @@ func _spawn_settlement() -> void:
 	player_settlement = settlement
 	var origin = get_spawn_point(default_spawn)
 	settlement.initialize(origin)
+
+
+## Instantiate the tile state overlay in debug builds only.
+## Uses load() so no static reference survives a production export.
+func _maybe_init_tile_overlay() -> void:
+	const PATH = "res://src/scenes/components/debug/tile_state_overlay.tscn"
+	if not OS.is_debug_build():
+		return
+	if not ResourceLoader.exists(PATH):
+		return
+	var scene := load(PATH) as PackedScene
+	if scene:
+		add_child(scene.instantiate())
 
 
 ## Spawn entities at marked positions

@@ -17,6 +17,9 @@ signal facility_built(facility: Node)
 
 @export_group("Resource Node")
 @export var node_type: Enums.ResourceNodeType = Enums.ResourceNodeType.GROVE
+## Tile footprint this node occupies (odd dimensions, centered on cell_pos).
+## Most resource nodes are 3x3. Adjust per node in the inspector if needed.
+@export var footprint_size: Vector2i = Vector2i(3, 3)
 
 #endregion
 
@@ -37,8 +40,11 @@ var claimed_by: Node = null
 ## The facility built on this node (null until constructed)
 var facility: Node = null
 
-## Grid cell position (set during WorldGrid registration)
+## Anchor grid cell (center of footprint, set during WorldGrid registration)
 var cell_pos: Vector2i = Vector2i.ZERO
+
+## All cells this node occupies (populated during registration)
+var _footprint_cells: Array[Vector2i] = []
 
 #endregion
 
@@ -97,15 +103,29 @@ func _apply_debug_overlay() -> void:
 	overlay.set_display_name(type_name.capitalize())
 
 
-## Register this node's cell position with WorldGrid
+## Register the full footprint with WorldGrid (centered on cell_pos).
+## Uses call_deferred so WorldGrid is guaranteed to be loaded first.
 func _register_with_world_grid() -> void:
 	var world_grid = GameManager.WorldGridService if GameManager else null
 	if not world_grid:
 		return
+
 	cell_pos = world_grid.world_to_cell(global_position)
-	if world_grid.has_cell(cell_pos):
-		world_grid.set_resource_node(cell_pos, node_type)
-		print("ResourceNode: Registered %s at cell %s" % [Enums.ResourceNodeType.keys()[node_type], cell_pos])
+
+	var half_x: int = footprint_size.x / 2
+	var half_y: int = footprint_size.y / 2
+
+	_footprint_cells.clear()
+	for dx in range(-half_x, half_x + 1):
+		for dy in range(-half_y, half_y + 1):
+			var fp_cell := cell_pos + Vector2i(dx, dy)
+			if world_grid.has_cell(fp_cell):
+				world_grid.set_resource_node(fp_cell, node_type)
+				_footprint_cells.append(fp_cell)
+
+	print("ResourceNode: Registered %s — %d cells, footprint %s, anchor %s" % [
+		Enums.ResourceNodeType.keys()[node_type], _footprint_cells.size(), footprint_size, cell_pos
+	])
 
 #endregion
 
@@ -127,11 +147,22 @@ func release_claim() -> void:
 	claimed_by = null
 
 
-## Mark the facility as built on this node.
-## The node remains as the anchor; the facility is the active building.
-func set_facility(built_facility: Node) -> void:
-	facility = built_facility
-	facility_built.emit(built_facility)
+## Convert this resource node into a built facility.
+##
+## Called by the builder system once construction is complete.
+## Clears the resource node footprint from WorldGrid, registers the building
+## on all footprint cells, emits facility_built, then removes this node.
+## The building node must already be added to the scene tree before calling this.
+func convert_to_facility(building: Node) -> void:
+	var world_grid = GameManager.WorldGridService if GameManager else null
+	if world_grid:
+		for fp_cell in _footprint_cells:
+			world_grid.clear_resource_node(fp_cell)
+			world_grid.set_building(fp_cell, building)
+
+	facility = building
+	facility_built.emit(building)
+	queue_free()
 
 
 ## Whether this node has a completed facility

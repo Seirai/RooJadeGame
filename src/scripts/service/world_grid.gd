@@ -54,7 +54,7 @@ var _world_seed: int = 0
 ## Convert world-space position to grid cell coordinates
 func world_to_cell(world_pos: Vector2) -> Vector2i:
 	if _tilemap_layer:
-		return _tilemap_layer.local_to_map(world_pos)
+		return _tilemap_layer.local_to_map(_tilemap_layer.to_local(world_pos))
 	push_warning("WorldGrid: No TileMapLayer set, falling back to integer division")
 	return Vector2i(int(world_pos.x), int(world_pos.y))
 
@@ -62,7 +62,7 @@ func world_to_cell(world_pos: Vector2) -> Vector2i:
 ## Convert grid cell coordinates to world-space position (center of cell)
 func cell_to_world(cell_pos: Vector2i) -> Vector2:
 	if _tilemap_layer:
-		return _tilemap_layer.map_to_local(cell_pos)
+		return _tilemap_layer.to_global(_tilemap_layer.map_to_local(cell_pos))
 	push_warning("WorldGrid: No TileMapLayer set, falling back to direct cast")
 	return Vector2(cell_pos)
 
@@ -235,6 +235,14 @@ func set_resource_node(cell_pos: Vector2i, node_type: Enums.ResourceNodeType) ->
 func get_resource_node(cell_pos: Vector2i) -> int:
 	var cell = _cells.get(cell_pos, {})
 	return cell.get("resource_node", -1)
+
+
+## Clear the resource node marker from a cell (e.g., after a facility is built)
+func clear_resource_node(cell_pos: Vector2i) -> void:
+	if not _cells.has(cell_pos):
+		return
+	_cells[cell_pos]["resource_node"] = -1
+	cell_changed.emit(cell_pos)
 
 
 ## Find all cells with resource nodes (optionally filtered by type)

@@ -156,19 +156,40 @@ func _init_managers() -> void:
 
 
 ## Claim a patch of starting territory around a world position.
+## In platformer maps the spawn marker is placed in the air, so the raw cell
+## may be above the tile grid.  We scan downward until we land on a passable
+## in-bounds cell, then claim a radius around that cell.
 func _claim_starting_tiles(origin_position: Vector2, radius: int) -> void:
 	var world_grid = GameManager.WorldGridService if GameManager else null
 	if not world_grid:
 		push_warning("Settlement: WorldGridService not available for starting territory")
 		return
-	var center = world_grid.world_to_cell(origin_position)
+
+	var raw_center := world_grid.world_to_cell(origin_position)
+	var center := _find_ground_cell(world_grid, raw_center)
+
+	if center == Vector2i.MIN:
+		push_warning("Settlement: No passable cell found near spawn %s (raw cell %s)" % [origin_position, raw_center])
+		return
+
 	for x in range(-radius, radius + 1):
 		for y in range(-radius, radius + 1):
 			var cell = center + Vector2i(x, y)
 			if not world_grid.has_cell(cell) or not world_grid.is_passable(cell):
 				continue
 			_territory_manager.claim_tile_immediate(cell)
-	print("Settlement: Claimed %d starting tiles around %s" % [_claimed_tiles.size(), center])
+	print("Settlement: Claimed %d starting tiles around %s (raw %s)" % [_claimed_tiles.size(), center, raw_center])
+
+
+## Scan downward from start_cell until we hit a passable in-bounds cell.
+## Returns Vector2i.MIN if none found within MAX_SCAN rows.
+func _find_ground_cell(world_grid: WorldGrid, start_cell: Vector2i) -> Vector2i:
+	const MAX_SCAN: int = 64
+	for dy in range(0, MAX_SCAN):
+		var cell := Vector2i(start_cell.x, start_cell.y + dy)
+		if world_grid.has_cell(cell) and world_grid.is_passable(cell):
+			return cell
+	return Vector2i.MIN
 
 #endregion
 
@@ -332,6 +353,12 @@ func get_territory_bounds() -> Rect2i:
 		max_pos.y = maxi(max_pos.y, pos.y)
 
 	return Rect2i(min_pos, max_pos - min_pos + Vector2i.ONE)
+
+
+## Directly claim a tile after a scout has completed their dwell.
+## Bypasses the time-delay auto-claim system; the dwell itself is the gate.
+func claim_tile_direct(tile_position: Vector2i) -> void:
+	_territory_manager.claim_tile_immediate(tile_position)
 
 
 ## Report a threat at a cell position

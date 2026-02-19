@@ -6,16 +6,16 @@
 [ext_resource type="PackedScene" uid="uid://c61kjoplvb1qb" path="res://src/scenes/mobs/player.tscn" id="3_player"]
 [ext_resource type="PackedScene" uid="uid://3okpmjys23pi" path="res://src/scenes/mobs/roo.tscn" id="4_4e0a0"]
 [ext_resource type="PackedScene" path="res://src/scenes/world/resource_node.tscn" id="5_resnode"]
-[ext_resource type="PackedScene" path="res://src/scenes/systems/settlement.tscn" id="6_settl"]
+[ext_resource type="PackedScene" uid="uid://2ic06xrm0ehx" path="res://src/scenes/systems/settlement.tscn" id="6_settl"]
 
 [node name="TestStage1" type="Node2D"]
 script = ExtResource("1_stage")
 player_scene = ExtResource("3_player")
 roo_scene = ExtResource("4_4e0a0")
-settlement_scene = ExtResource("6_settl")
 map_id = "test_stage_1"
 map_name = "Test Stage 1"
 camera_bounds = Rect2(0, -500, 2000, 1000)
+settlement_scene = ExtResource("6_settl")
 
 [node name="TileMaps" type="Node2D" parent="."]
 position = Vector2(5, 2)
@@ -40,19 +40,17 @@ gizmo_extents = 32.0
 [node name="Collectibles" type="Node2D" parent="Entities"]
 
 [node name="Grove1" parent="Entities" instance=ExtResource("5_resnode")]
-position = Vector2(150, 200)
-node_type = 0
+position = Vector2(150, 232)
 
 [node name="Grove2" parent="Entities" instance=ExtResource("5_resnode")]
-position = Vector2(220, 200)
-node_type = 0
+position = Vector2(220, 232)
 
 [node name="OreOutcrop" parent="Entities" instance=ExtResource("5_resnode")]
-position = Vector2(400, 200)
+position = Vector2(400, 232)
 node_type = 1
 
 [node name="JadeDeposit" parent="Entities" instance=ExtResource("5_resnode")]
-position = Vector2(700, 200)
+position = Vector2(700, 232)
 node_type = 2
 
 [node name="Camera2D" type="Camera2D" parent="."]

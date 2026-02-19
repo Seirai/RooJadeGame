@@ -171,6 +171,8 @@ func _update_debug_display() -> void:
 		return
 
 	var prof_name = Enums.Professions.keys()[roo.profession]
-	roo.debug_overlay.set_info("%s: %s" % [prof_name, _current_state_name])
+	var activity: String = blackboard.get_value("activity_state", "")
+	var display_state: String = activity if activity != "" else _current_state_name
+	roo.debug_overlay.set_info("%s: %s" % [prof_name, display_state])
 
 #endregion
