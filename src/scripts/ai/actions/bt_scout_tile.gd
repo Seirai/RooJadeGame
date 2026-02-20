@@ -28,23 +28,24 @@ var _reserved_cell: Vector2i = Vector2i.MIN
 func _on_start() -> void:
 	_timer = 0.0
 	_scouted = false
-	# Reserve the target cell immediately so no other scout picks the same tile.
+	# The cell was already reserved by BTFindFrontierTile. Just record it here
+	# so _on_end() knows which cell to release.
 	var cell = blackboard.get_value("scout_target_cell")
-	var world_grid: WorldGrid = blackboard.get_value("world_grid")
-	var roo = blackboard.get_value("roo")
-	if cell is Vector2i and world_grid:
-		_reserved_cell = cell
-		world_grid.reserve_scout_target(cell, roo.roo_id if roo else -1)
-	else:
-		_reserved_cell = Vector2i.MIN
+	_reserved_cell = cell if cell is Vector2i else Vector2i.MIN
 
 
 func _execute(delta: float) -> Enums.BTStatus:
 	var settlement: Settlement = blackboard.get_value("settlement")
 	var roo = blackboard.get_value("roo")
 	var cell = blackboard.get_value("scout_target_cell")
+	var world_grid: WorldGrid = blackboard.get_value("world_grid")
 
 	if settlement == null or roo == null or not cell is Vector2i:
+		return Enums.BTStatus.FAILURE
+
+	# Abort if the upstream chain was cancelled: our tile must still have at least
+	# one SCOUTED or CLAIMED neighbor to remain a valid frontier target.
+	if world_grid and not _has_adjacent_known(world_grid, cell):
 		return Enums.BTStatus.FAILURE
 
 	# Mark the tile as scouted on the first tick so the world grid updates immediately.
@@ -64,17 +65,30 @@ func _execute(delta: float) -> Enums.BTStatus:
 	return Enums.BTStatus.SUCCESS
 
 
-func _on_end(_status: Enums.BTStatus) -> void:
+func _on_end(status: Enums.BTStatus) -> void:
 	_timer = 0.0
-	_scouted = false
 	blackboard.erase_key("activity_state")
-	# Release the reservation so the cell becomes available again if the dwell
-	# was aborted, or to keep reservations tidy on success.
+	blackboard.erase_key("scout_target_cell")
 	if _reserved_cell != Vector2i.MIN:
 		var world_grid: WorldGrid = blackboard.get_value("world_grid")
 		if world_grid:
 			world_grid.release_scout_target(_reserved_cell)
+			# Revert SCOUTED → UNKNOWN on failure so dependent scouts detect the
+			# broken chain and abort their own dwells.
+			if _scouted and status == Enums.BTStatus.FAILURE:
+				if world_grid.get_territory_state(_reserved_cell) == Enums.TileState.SCOUTED:
+					world_grid.set_territory_state(_reserved_cell, Enums.TileState.UNKNOWN)
 		_reserved_cell = Vector2i.MIN
+	_scouted = false
+
+
+## Returns true if at least one neighbor of cell has a non-UNKNOWN territory state.
+## Used to detect when an upstream chain tile was reverted, invalidating this dwell.
+func _has_adjacent_known(world_grid: WorldGrid, cell: Vector2i) -> bool:
+	for neighbor in world_grid.get_neighbors(cell):
+		if world_grid.get_territory_state(neighbor) != Enums.TileState.UNKNOWN:
+			return true
+	return false
 
 
 ## Returns the effective dwell duration for this Roo.
