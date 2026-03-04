@@ -32,6 +32,7 @@ static func _register_all_buildings() -> void:
 	register_building(_create_depot())
 	register_building(_create_research_facility())
 	register_building(_create_workshop())
+	register_building(_create_makeshift_shelter())
 
 	print("BuildingLibrary: Registered %d buildings" % _buildings.size())
 
@@ -99,6 +100,7 @@ static func _ensure_initialized() -> void:
 static func _create_living_quarters() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.LIVING_QUARTERS
+	b.category = Enums.BuildingCategory.RESIDENTIAL
 	b.display_name = "Living Quarters"
 	b.description = "Housing for Roos. Increases population capacity."
 	b.construction_cost = {
@@ -114,6 +116,7 @@ static func _create_living_quarters() -> BuildingDef:
 static func _create_lumber_mill() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.LUMBER_MILL
+	b.category = Enums.BuildingCategory.WORKPLACE
 	b.display_name = "Lumber Mill"
 	b.description = "Processes wood. Assign Lumberjacks to harvest."
 	b.construction_cost = {
@@ -129,6 +132,7 @@ static func _create_lumber_mill() -> BuildingDef:
 static func _create_stone_quarry() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.STONE_QUARRY
+	b.category = Enums.BuildingCategory.WORKPLACE
 	b.display_name = "Stone Quarry"
 	b.description = "Extracts stone from the earth. Assign Miners to work."
 	b.construction_cost = {
@@ -144,6 +148,7 @@ static func _create_stone_quarry() -> BuildingDef:
 static func _create_jade_quarry() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.JADE_QUARRY
+	b.category = Enums.BuildingCategory.WORKPLACE
 	b.display_name = "Jade Quarry"
 	b.description = "Premium quarry for extracting jade from meteorite deposits."
 	b.construction_cost = {
@@ -159,6 +164,7 @@ static func _create_jade_quarry() -> BuildingDef:
 static func _create_depot() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.DEPOT
+	b.category = Enums.BuildingCategory.STORAGE
 	b.display_name = "Depot"
 	b.description = "Central resource storage for the settlement."
 	b.construction_cost = {
@@ -174,6 +180,7 @@ static func _create_depot() -> BuildingDef:
 static func _create_research_facility() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.RESEARCH_FACILITY
+	b.category = Enums.BuildingCategory.RESEARCH
 	b.display_name = "Research Facility"
 	b.description = "Unlocks the Scientist profession and tech research."
 	b.construction_cost = {
@@ -190,6 +197,7 @@ static func _create_research_facility() -> BuildingDef:
 static func _create_workshop() -> BuildingDef:
 	var b = BuildingDef.new()
 	b.building_type = Enums.BuildingType.WORKSHOP
+	b.category = Enums.BuildingCategory.WORKPLACE
 	b.display_name = "Workshop"
 	b.description = "Crafting station for equipment and tools."
 	b.construction_cost = {
@@ -199,4 +207,17 @@ static func _create_workshop() -> BuildingDef:
 	b.max_count = 0
 	b.required_stage = Enums.ProgressionStage.ESTABLISHED
 	b.worker_capacity = 2
+	return b
+
+
+static func _create_makeshift_shelter() -> BuildingDef:
+	var b = BuildingDef.new()
+	b.building_type = Enums.BuildingType.MAKESHIFT_SHELTER
+	b.category = Enums.BuildingCategory.RESIDENTIAL
+	b.display_name = "Makeshift Shelter"
+	b.description = "A cluster of sticks, leaves, and optimism. Not exactly luxury living, but beats sleeping on the frontier. Appears automatically when Roos run out of better options."
+	b.construction_cost = {}
+	b.max_count = 0
+	b.required_stage = Enums.ProgressionStage.FOUNDING
+	b.worker_capacity = 0
 	return b

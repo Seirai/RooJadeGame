@@ -112,14 +112,15 @@ func is_passable(cell_pos: Vector2i) -> bool:
 	return cell.get("passable", false)
 
 
-## Check if a cell can be built on (passable + no building + CLAIMED territory)
+## Check if a cell can be built on (passable + no building + CLAIMED territory + no resource node)
 func is_buildable(cell_pos: Vector2i) -> bool:
 	var cell = _cells.get(cell_pos, {})
 	if cell.is_empty():
 		return false
 	return cell.get("passable", false) \
 		and cell.get("building") == null \
-		and cell.get("territory_state", Enums.TileState.UNKNOWN) == Enums.TileState.CLAIMED
+		and cell.get("territory_state", Enums.TileState.UNKNOWN) == Enums.TileState.CLAIMED \
+		and cell.get("resource_node", -1) == -1
 
 
 ## Get the building node at a cell (or null)

@@ -44,8 +44,10 @@ func _ensure_type_registry_initialized() -> void:
 
 #region Public API
 
-## Register a building in the settlement at a grid cell
-func register(building: Node, building_type: Enums.BuildingType, cell_pos: Vector2i = Vector2i(-1, -1)) -> int:
+## Register a building in the settlement.
+## [param cell_pos] Anchor (leftmost/primary) cell. Pass Vector2i(-1,-1) if unpositioned.
+## [param extra_cells] Additional cells occupied beyond the anchor (multi-tile footprint).
+func register(building: Node, building_type: Enums.BuildingType, cell_pos: Vector2i = Vector2i(-1, -1), extra_cells: Array[Vector2i] = []) -> int:
 	var building_id = _next_building_id
 	_next_building_id += 1
 
@@ -55,12 +57,16 @@ func register(building: Node, building_type: Enums.BuildingType, cell_pos: Vecto
 	building.set_meta("settlement_building_id", building_id)
 	building.set_meta("building_type", building_type)
 
-	# Register on WorldGrid if a valid cell was provided
+	# Register all occupied cells on WorldGrid.
 	if cell_pos != Vector2i(-1, -1):
 		var world_grid = _get_world_grid()
 		if world_grid:
-			world_grid.set_building(cell_pos, building)
+			var all_cells: Array[Vector2i] = [cell_pos]
+			all_cells.append_array(extra_cells)
+			for cell in all_cells:
+				world_grid.set_building(cell, building)
 			building.set_meta("grid_cell", cell_pos)
+			building.set_meta("grid_cells", all_cells)
 
 	_stats["buildings_constructed"] = _stats.get("buildings_constructed", 0) + 1
 	building_placed.emit(building, building_type)
@@ -76,12 +82,17 @@ func unregister(building: Node) -> void:
 	if building_id < 0:
 		return
 
-	# Clear from WorldGrid
-	var cell_pos = building.get_meta("grid_cell", Vector2i(-1, -1))
-	if cell_pos != Vector2i(-1, -1):
-		var world_grid = _get_world_grid()
-		if world_grid:
-			world_grid.clear_building(cell_pos)
+	# Clear all occupied cells from WorldGrid.
+	var world_grid = _get_world_grid()
+	if world_grid:
+		# Prefer the full cell list; fall back to single anchor for older buildings.
+		var cells: Array = building.get_meta("grid_cells", [])
+		if cells.is_empty():
+			var anchor: Vector2i = building.get_meta("grid_cell", Vector2i(-1, -1))
+			if anchor != Vector2i(-1, -1):
+				cells = [anchor]
+		for cell in cells:
+			world_grid.clear_building(cell)
 
 	_buildings.erase(building_id)
 	_buildings_by_type[building_type].erase(building)

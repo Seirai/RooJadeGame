@@ -31,7 +31,7 @@ tile_set = ExtResource("3_1mwrg")
 
 [node name="PlayerSpawn" type="Marker2D" parent="MapObjects/SpawnPoints"]
 position = Vector2(100, -50)
-gizmo_extents = 32.0
+gizmo_extents = 64.0
 
 [node name="Entities" type="Node2D" parent="."]
 

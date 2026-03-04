@@ -111,9 +111,39 @@ func initialize(origin_position: Vector2, territory_radius: int = 3) -> void:
 	_claim_starting_tiles(origin_position, territory_radius)
 
 
+## Seconds between autonomous shelter-need evaluations (real-game speed).
+## Divided by GameManager.debug_speed at runtime.
+const SHELTER_EVAL_INTERVAL: float = 30.0
+
+## Minimum score a placement candidate must reach to trigger auto-placement.
+const SHELTER_SCORE_THRESHOLD: float = 1.0
+
+var _shelter_eval_timer: float = 0.0
+
+
 func _process(delta: float) -> void:
 	_research_manager.process_research(delta)
 	_territory_manager.process_claiming(delta)
+	_tick_shelter_evaluation(delta)
+
+
+func _tick_shelter_evaluation(delta: float) -> void:
+	var speed := GameManager.debug_speed if GameManager else 1.0
+	var interval := SHELTER_EVAL_INTERVAL / maxf(speed, 0.01)
+	_shelter_eval_timer += delta
+	if _shelter_eval_timer < interval:
+		return
+	_shelter_eval_timer = 0.0
+	_auto_place_shelter_if_needed()
+
+
+func _auto_place_shelter_if_needed() -> void:
+	var candidates := evaluate_shelter_placements()
+	if candidates.is_empty():
+		return
+	var best: ShelterPlacementService.PlacementCandidate = candidates[0]
+	if best.score >= SHELTER_SCORE_THRESHOLD:
+		place_shelter(best.cell)
 
 
 func _create_managers() -> void:
@@ -230,7 +260,12 @@ func get_ai_count() -> int:
 	return _population_manager.get_ai_count()
 
 func register_roo(roo: Node, is_viewer: bool, viewer_id: String = "") -> int:
-	return _population_manager.register_roo(roo, is_viewer, viewer_id)
+	var id := _population_manager.register_roo(roo, is_viewer, viewer_id)
+	# Stagger initial stamina so Roos don't all need rest simultaneously.
+	# Every 3 Roos cycle through: 1.0, 0.67, 0.33, 1.0, 0.67, ...
+	if roo is Roo:
+		roo.stamina = 1.0 - fmod(float(id) / 3.0, 1.0)
+	return id
 
 func unregister_roo(roo: Node) -> void:
 	_population_manager.unregister_roo(roo)
@@ -284,6 +319,82 @@ func find_nearest_building(building_type: Enums.BuildingType, position: Vector2)
 
 func find_available_building(building_type: Enums.BuildingType, position: Vector2) -> Node:
 	return _building_manager.find_available(building_type, position)
+
+
+## Find the nearest available (has_vacancy) residential building to a position.
+## Checks MAKESHIFT_SHELTER and LIVING_QUARTERS; returns closest with a free slot.
+## Used by BTFindShelter for hot-bunking when a Roo has no assigned home_shelter.
+func find_available_residential(position: Vector2) -> Node:
+	var best: Node = null
+	var best_dist: float = INF
+	for building_type in [Enums.BuildingType.MAKESHIFT_SHELTER, Enums.BuildingType.LIVING_QUARTERS]:
+		var candidate := _building_manager.find_available(building_type, position)
+		if candidate is Node2D:
+			var dist: float = position.distance_squared_to(candidate.global_position)
+			if dist < best_dist:
+				best_dist = dist
+				best = candidate
+	return best
+
+
+## Return all registered buildings whose BuildingLibrary definition has
+## category == RESIDENTIAL (covers LIVING_QUARTERS, MAKESHIFT_SHELTER, and
+## any future housing types without requiring callers to enumerate types).
+func get_residential_buildings() -> Array[Node]:
+	var result: Array[Node] = []
+	for building in _buildings.values():
+		var building_type: Enums.BuildingType = building.get_meta("building_type", Enums.BuildingType.NONE)
+		var def := BuildingLibrary.get_building(building_type)
+		if def and def.category == Enums.BuildingCategory.RESIDENTIAL:
+			result.append(building)
+	return result
+
+
+## Return ranked shelter placement candidates using ShelterPlacementService.
+## The same result is consumed by the autonomous loop, Twitch vote, or player UI.
+func evaluate_shelter_placements() -> Array:  # Array[ShelterPlacementService.PlacementCandidate]
+	var world_grid: WorldGrid = GameManager.WorldGridService if GameManager else null
+	if world_grid == null:
+		return []
+	var roos: Array = _ai_roos.values()
+	var residential := get_residential_buildings()
+	return ShelterPlacementService.evaluate(world_grid, roos, residential)
+
+
+## Instantiate and register a makeshift shelter at the given anchor cell.
+## The shelter occupies MakeshiftShelter.FOOTPRINT_WIDTH cells horizontally.
+## All footprint cells must be buildable; the visual is centred on the middle tile.
+## Call from the autonomous loop, a Twitch handler, or player input —
+## all three share this single placement path.
+func place_shelter(cell: Vector2i) -> void:
+	var world_grid: WorldGrid = GameManager.WorldGridService if GameManager else null
+	if world_grid == null:
+		push_warning("Settlement: Cannot place shelter — WorldGridService unavailable")
+		return
+
+	# Verify every cell in the footprint is buildable.
+	var footprint := MakeshiftShelter.get_footprint(cell)
+	for fc in footprint:
+		if not _building_manager.can_build_at(fc):
+			push_warning("Settlement: Cannot place shelter — cell %s in footprint not buildable" % fc)
+			return
+
+	const SHELTER_SCENE := "res://src/scenes/buildings/makeshift_shelter.tscn"
+	var packed := load(SHELTER_SCENE) as PackedScene
+	if packed == null:
+		push_error("Settlement: Failed to load makeshift_shelter.tscn")
+		return
+
+	var shelter := packed.instantiate()
+	# Centre the visual on the middle tile of the footprint.
+	var mid_cell := cell + Vector2i(MakeshiftShelter.FOOTPRINT_WIDTH / 2, 0)
+	shelter.global_position = world_grid.cell_to_world(mid_cell)
+	add_child(shelter)
+
+	# Register with anchor cell + all remaining footprint cells as extras.
+	var extra_cells: Array[Vector2i] = footprint.slice(1)
+	_building_manager.register(shelter, Enums.BuildingType.MAKESHIFT_SHELTER, cell, extra_cells)
+	print("Settlement: Placed makeshift shelter at cells %s–%s" % [cell, footprint[-1]])
 
 #endregion
 

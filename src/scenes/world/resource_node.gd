@@ -18,8 +18,8 @@ signal facility_built(facility: Node)
 @export_group("Resource Node")
 @export var node_type: Enums.ResourceNodeType = Enums.ResourceNodeType.GROVE
 ## Tile footprint this node occupies (odd dimensions, centered on cell_pos).
-## Most resource nodes are 3x3. Adjust per node in the inspector if needed.
-@export var footprint_size: Vector2i = Vector2i(3, 3)
+## Most resource nodes are 5x5. Adjust per node in the inspector if needed.
+@export var footprint_size: Vector2i = Vector2i(5, 5)
 
 #endregion
 

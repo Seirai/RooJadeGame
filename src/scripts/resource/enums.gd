@@ -53,13 +53,23 @@ enum Team {
 ## Building types in the settlement
 enum BuildingType {
 	NONE,
-	LIVING_QUARTERS,  ## Housing for Roos
-	LUMBER_MILL,      ## Wood production
-	STONE_QUARRY,     ## Stone production
-	JADE_QUARRY,      ## Jade production (premium)
-	DEPOT,            ## Resource storage
-	RESEARCH_FACILITY,## Unlocks Scientist profession and tech
-	WORKSHOP,         ## Equipment crafting
+	LIVING_QUARTERS,    ## Housing for Roos
+	LUMBER_MILL,        ## Wood production
+	STONE_QUARRY,       ## Stone production
+	JADE_QUARRY,        ## Jade production (premium)
+	DEPOT,              ## Resource storage
+	RESEARCH_FACILITY,  ## Unlocks Scientist profession and tech
+	WORKSHOP,           ## Equipment crafting
+	MAKESHIFT_SHELTER,  ## Temporary resting spot near worksites
+}
+
+## Functional categories for building queries (residential, workplace, etc.)
+enum BuildingCategory {
+	NONE,
+	RESIDENTIAL,  ## Housing: MAKESHIFT_SHELTER, LIVING_QUARTERS
+	WORKPLACE,    ## Production/extraction: mills, quarries, workshop
+	STORAGE,      ## DEPOT
+	RESEARCH,     ## RESEARCH_FACILITY
 }
 
 ## Settlement progression stages

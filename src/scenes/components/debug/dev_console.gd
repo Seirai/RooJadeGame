@@ -28,6 +28,9 @@ var _commands: Dictionary = {}
 var _history: PackedStringArray = []
 var _history_cursor: int = -1
 
+## Mouse coordinate overlay instance (null when toggled off)
+var _mouse_coord_overlay: MouseCoordOverlay = null
+
 #endregion
 
 #region Resource name lookup (matches ItemsLibrary.Items enum order)
@@ -78,7 +81,7 @@ func _register_all_commands() -> void:
 	register("settlement", _cmd_settlement, "Settlement inspection.",                               "settlement resources | roos | stage | add <item> <amount>")
 	register("world",      _cmd_world,      "World grid queries.",                                  "world cell <x> <y> | world pos <x> <y>")
 	register("scene",      _cmd_scene,      "Scene control.",                                       "scene reload")
-	register("debug",      _cmd_debug,      "Debug tools.",                                         "debug overlays on|off | debug tiles on|off | debug speed <multiplier>")
+	register("debug",      _cmd_debug,      "Debug tools.",                                         "debug overlays on|off | debug tiles on|off | debug coords on|off | debug speed <multiplier>")
 
 #endregion
 
@@ -407,6 +410,8 @@ func _cmd_debug(args: Array) -> void:
 			_toggle_overlays(enabled)
 		"tiles":
 			_toggle_tile_overlay(enabled)
+		"coords":
+			_toggle_mouse_coords(enabled)
 		"speed":
 			_debug_set_speed((args[1] as String).to_float())
 		_:
@@ -432,6 +437,26 @@ func _toggle_tile_overlay(enabled: bool) -> void:
 		if overlay.has_method("set_labels_visible"):
 			overlay.set_labels_visible(enabled)
 	_ok("Tile state overlay %s." % ("on" if enabled else "off"))
+
+
+func _toggle_mouse_coords(enabled: bool) -> void:
+	if enabled:
+		if is_instance_valid(_mouse_coord_overlay):
+			_ok("Mouse coord overlay already on.")
+			return
+		const PATH := "res://src/scenes/components/debug/mouse_coord_overlay.tscn"
+		var packed := load(PATH) as PackedScene
+		if packed == null:
+			_err("Failed to load mouse_coord_overlay.tscn")
+			return
+		_mouse_coord_overlay = packed.instantiate() as MouseCoordOverlay
+		get_tree().root.add_child(_mouse_coord_overlay)
+		_ok("Mouse coord overlay on.")
+	else:
+		if is_instance_valid(_mouse_coord_overlay):
+			_mouse_coord_overlay.queue_free()
+			_mouse_coord_overlay = null
+		_ok("Mouse coord overlay off.")
 
 
 func _debug_set_speed(multiplier: float) -> void:

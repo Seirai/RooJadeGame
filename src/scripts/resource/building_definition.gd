@@ -25,3 +25,6 @@ class_name BuildingDefinition
 
 ## Worker capacity (how many Roos can work here)
 @export var worker_capacity: int = 0
+
+## Functional category used for queries (residential, workplace, storage, etc.)
+@export var category: Enums.BuildingCategory = Enums.BuildingCategory.NONE

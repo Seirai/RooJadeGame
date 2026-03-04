@@ -88,17 +88,42 @@ func _build_tree(profession: Enums.Professions) -> void:
 	if _behavior_tree:
 		_behavior_tree.reset()
 
+	var profession_tree: BTNode = null
 	match profession:
 		Enums.Professions.SCOUT:
-			_behavior_tree = _build_scout_tree()
+			profession_tree = _build_scout_tree()
 		_:
-			_behavior_tree = _build_idle_tree()
+			profession_tree = _build_idle_tree()
 
+	# All profession trees are wrapped with a rest-priority outer selector.
+	_behavior_tree = _wrap_with_rest(profession_tree)
 	_behavior_tree.initialize(blackboard)
 
 #endregion
 
 #region Tree Builders
+
+## Wraps any profession tree with a rest-priority selector at the root.
+##
+## On each BT cycle the root tries child 0 (rest sequence) first.
+## BTNeedsRest returns FAILURE when stamina is above REST_TRIGGER, so the
+## selector falls through to the profession tree transparently.
+func _wrap_with_rest(profession_tree: BTNode) -> BTNode:
+	var root = BTSelector.new()
+	root.add_child_node(_build_rest_subtree())
+	root.add_child_node(profession_tree)
+	return root
+
+
+## Sequence: need rest? → find shelter → walk there → regenerate.
+func _build_rest_subtree() -> BTNode:
+	var rest_seq = BTSequence.new()
+	rest_seq.add_child_node(BTNeedsRest.new())
+	rest_seq.add_child_node(BTFindShelter.new())
+	rest_seq.add_child_node(BTMoveTo.new())
+	rest_seq.add_child_node(BTRest.new())
+	return rest_seq
+
 
 ## NONE/fallback: Wander randomly near home.
 ## Sequence loops: pick random point -> move to it -> wait.
@@ -173,6 +198,7 @@ func _update_debug_display() -> void:
 	var prof_name = Enums.Professions.keys()[roo.profession]
 	var activity: String = blackboard.get_value("activity_state", "")
 	var display_state: String = activity if activity != "" else _current_state_name
-	roo.debug_overlay.set_info("%s: %s" % [prof_name, display_state])
+	var stamina_pct: int = int(roo.stamina * 100.0)
+	roo.debug_overlay.set_info("%s: %s  [%d%%]" % [prof_name, display_state, stamina_pct])
 
 #endregion
